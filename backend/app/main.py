@@ -9,12 +9,23 @@ from backend.app.db.base import Base
 from backend.app.db.session import engine
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    Base.metadata.create_all(bind=engine)
-    yield
+def create_lifespan(database_engine=engine):
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        Base.metadata.create_all(bind=database_engine)
+        yield
+
+    return lifespan
 
 
-app = FastAPI(title="Sprint 1 API Data Flow", lifespan=lifespan)
-register_error_handlers(app)
-app.include_router(posts_router, prefix="/api/v1")
+def create_app(database_engine=engine) -> FastAPI:
+    app = FastAPI(
+        title="Sprint 1 API Data Flow",
+        lifespan=create_lifespan(database_engine),
+    )
+    register_error_handlers(app)
+    app.include_router(posts_router, prefix="/api/v1")
+    return app
+
+
+app = create_app()

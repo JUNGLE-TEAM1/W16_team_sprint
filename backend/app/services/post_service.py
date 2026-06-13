@@ -1,22 +1,45 @@
+from typing import Protocol
+
 from fastapi import status
-from sqlalchemy.orm import Session
 
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
-from backend.app.repositories.post_repository import PostRepository
 from backend.app.schemas.post import PostCreate
 
 
+class PostRepositoryPort(Protocol):
+    def create(self, post: Post) -> Post:
+        pass
+
+    def list(self) -> list[Post]:
+        pass
+
+    def get(self, post_id: int) -> Post | None:
+        pass
+
+
+class UnitOfWork(Protocol):
+    def commit(self) -> None:
+        pass
+
+    def rollback(self) -> None:
+        pass
+
+
 class PostService:
-    def __init__(self, db: Session) -> None:
-        self.db = db
-        self.posts = PostRepository(db)
+    def __init__(self, posts: PostRepositoryPort, unit_of_work: UnitOfWork) -> None:
+        self.posts = posts
+        self.unit_of_work = unit_of_work
 
     def create(self, payload: PostCreate) -> Post:
         post = Post(**payload.model_dump())
-        saved_post = self.posts.create(post)
-        self.db.commit()
-        return saved_post
+        try:
+            saved_post = self.posts.create(post)
+            self.unit_of_work.commit()
+            return saved_post
+        except Exception:
+            self.unit_of_work.rollback()
+            raise
 
     def list(self) -> list[Post]:
         return self.posts.list()
