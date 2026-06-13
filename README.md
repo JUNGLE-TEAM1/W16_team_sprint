@@ -76,16 +76,29 @@ AI 기능이 프로젝트의 핵심 가치라면 `AI/RAG/LLM 기능 흐름`은 2
 ## 실행 방법
 
 ```bash
+cp .env.example .env
+docker compose up -d db
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn backend.app.main:app --reload
+uvicorn backend.app.main:app --reload --env-file .env
 ```
+
+기본 DB는 PostgreSQL입니다. `.env.example`의 `DATABASE_URL`은 `docker-compose.yml`로 실행되는 로컬 PostgreSQL 컨테이너를 가리킵니다.
 
 API 문서는 아래 주소에서 확인할 수 있습니다.
 
 ```text
 http://127.0.0.1:8000/docs
+```
+
+## 테스트 방법
+
+테스트도 같은 PostgreSQL DB를 사용합니다.
+
+```bash
+docker compose up -d db
+./.venv/bin/python -m pytest backend/tests
 ```
 
 ## 요청 예시

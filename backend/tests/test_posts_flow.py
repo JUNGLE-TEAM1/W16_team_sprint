@@ -15,13 +15,13 @@ def setup_function() -> None:
 def test_create_list_and_get_post() -> None:
     create_response = client.post(
         "/api/v1/posts",
-        json={"title": "Sprint 1", "content": "API and DB flow", "author_name": "team1"},
+        json={"title": "스프린트 1", "content": "API와 DB 흐름", "author_name": "team1"},
     )
 
     assert create_response.status_code == 201
     created_post = create_response.json()
     assert created_post["id"] == 1
-    assert created_post["title"] == "Sprint 1"
+    assert created_post["title"] == "스프린트 1"
 
     list_response = client.get("/api/v1/posts")
     assert list_response.status_code == 200
@@ -29,7 +29,7 @@ def test_create_list_and_get_post() -> None:
 
     get_response = client.get("/api/v1/posts/1")
     assert get_response.status_code == 200
-    assert get_response.json()["content"] == "API and DB flow"
+    assert get_response.json()["content"] == "API와 DB 흐름"
 
 
 def test_get_missing_post_returns_common_error_shape() -> None:

@@ -3,9 +3,9 @@ from collections.abc import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-DATABASE_URL = "sqlite:///./sprint1.db"
+from backend.app.core.config import settings
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
