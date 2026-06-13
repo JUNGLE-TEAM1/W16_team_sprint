@@ -69,7 +69,7 @@ sequenceDiagram
     API->>API: UserCreate schema 검증
     API->>Service: register(payload)
     Service->>Users: get_by_username(username)
-    Users->>DB: SELECT users WHERE username = ?
+    Users->>DB: SELECT user by username
     alt 이미 존재함
         Service-->>Client: 409 USERNAME_ALREADY_EXISTS
     else 신규 사용자
@@ -117,7 +117,7 @@ sequenceDiagram
     Service->>AuthRepo: create_session(AuthSession)
     AuthRepo->>DB: INSERT auth_sessions(token_hash, expires_at)
     Service->>DB: commit()
-    API->>Browser: Set-Cookie: session_id=원본 session token; HttpOnly
+    API->>Browser: Set-Cookie session_id with HttpOnly
 ```
 
 ```mermaid
@@ -206,7 +206,7 @@ sequenceDiagram
     Service->>Security: decode_jwt(token)
     Security->>Security: signature 검증
     Security->>Security: exp 만료 검증
-    Service->>Service: type == "access" 확인
+    Service->>Service: access token type 확인
     Service->>Users: get(sub)
     Service-->>Client: 200 UserRead
 ```
@@ -310,12 +310,12 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Request[요청] --> Validation{Pydantic 검증 통과?}
+    Request[요청] --> Validation{Pydantic 검증 통과}
     Validation -- 아니오 --> ValidationError[RequestValidationError]
     ValidationError --> ErrorHandler[core/errors.py]
     ErrorHandler --> Response422[422 VALIDATION_ERROR]
     Validation -- 예 --> Service[AuthService]
-    Service --> AuthCheck{인증 정보 유효?}
+    Service --> AuthCheck{인증 정보 유효}
     AuthCheck -- 아니오 --> AppError[AppError]
     AppError --> ErrorHandler
     ErrorHandler --> Response401[401 INVALID_*]
