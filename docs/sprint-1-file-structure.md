@@ -14,7 +14,9 @@
 
 ```text
 W16_team_sprint/
+├── .env.example
 ├── README.md
+├── docker-compose.yml
 ├── requirements.txt
 ├── learning-priorities.md
 ├── docs/
@@ -31,6 +33,7 @@ W16_team_sprint/
     │   │       └── posts.py
     │   ├── core/
     │   │   ├── __init__.py
+    │   │   ├── config.py
     │   │   └── errors.py
     │   ├── db/
     │   │   ├── __init__.py
@@ -62,7 +65,8 @@ W16_team_sprint/
 | 서비스 | `services/post_service.py` | 비즈니스 규칙과 트랜잭션 경계 |
 | 레포지토리 | `repositories/post_repository.py` | DB 읽기/쓰기 세부 구현 |
 | 모델 | `models/post.py` | 테이블 컬럼, PK, 인덱스 |
-| DB | `db/session.py`, `db/base.py` | DB 엔진, 세션, 테이블 생성 |
+| 설정 | `core/config.py` | `DATABASE_URL` 같은 환경변수 설정 |
+| DB | `db/session.py`, `db/base.py` | PostgreSQL 엔진, 세션, 테이블 생성 |
 | 에러 | `core/errors.py` | 공통 에러 응답 형식 |
 
 ## 스프린트 1 API 계약

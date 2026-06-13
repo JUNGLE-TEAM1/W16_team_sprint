@@ -1,6 +1,9 @@
 .venv/
+.env
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.env
 sprint1.db
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

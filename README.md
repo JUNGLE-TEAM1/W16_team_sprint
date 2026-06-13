@@ -39,6 +39,18 @@ AI 기능이 프로젝트의 핵심 가치라면 `AI/RAG/LLM 기능 흐름`은 2
 클라이언트 요청 -> API 라우터 -> 검증/스키마 -> 서비스 -> 레포지토리 -> DB -> 응답/에러
 ```
 
+## 두 번째 스프린트
+
+두 번째 주제는 인증/인가와 보안 기본입니다.
+
+현재 저장소에는 같은 사용자 계정을 기준으로 아래 세 가지 인증 방식이 구현되어 있습니다.
+
+- Session cookie 방식
+- JWT access token 방식
+- access token + refresh token 방식
+
+자세한 흐름과 요청 예시는 [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)에 정리되어 있습니다.
+
 ## 스프린트 산출물
 
 각 스프린트가 끝나면 최소 하나 이상의 산출물을 남깁니다.
@@ -76,16 +88,28 @@ AI 기능이 프로젝트의 핵심 가치라면 `AI/RAG/LLM 기능 흐름`은 2
 ## 실행 방법
 
 ```bash
-docker compose up -d postgres
+cp .env.example .env
+docker compose up -d db
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/uvicorn backend.app.main:app --reload
+.venv/bin/uvicorn backend.app.main:app --reload --env-file .env
 ```
+
+기본 DB는 PostgreSQL입니다. `.env.example`의 `DATABASE_URL`은 `docker-compose.yml`로 실행되는 로컬 PostgreSQL 컨테이너를 가리킵니다.
 
 API 문서는 아래 주소에서 확인할 수 있습니다.
 
 ```text
 http://127.0.0.1:8000/docs
+```
+
+## 테스트 방법
+
+테스트도 같은 PostgreSQL DB를 사용합니다.
+
+```bash
+docker compose up -d db
+./.venv/bin/python -m pytest backend/tests
 ```
 
 ## 요청 예시
@@ -110,3 +134,5 @@ curl http://127.0.0.1:8000/api/v1/posts/1
 - [스프린트 1 파일 구조](docs/sprint-1-file-structure.md)
 - [스프린트 1 API 데이터 흐름](docs/sprint-1-api-data-flow.md)
 - [스프린트 1 개인 학습 가이드](docs/sprint-1-study-guide.md)
+- [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)
+- [스프린트 2 실행 흐름 가이드](docs/sprint-2-execution-flow-guide.md)
