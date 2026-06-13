@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from backend.app.core.time import utc_now
 from backend.app.db.base import Base
 
 
@@ -14,4 +15,4 @@ class Post(Base):
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     author_name: Mapped[str] = mapped_column(String(40), nullable=False, default="anonymous")
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utc_now)
