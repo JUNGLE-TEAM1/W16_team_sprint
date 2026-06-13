@@ -8,9 +8,9 @@ from backend.app.schemas.post import PostCreate
 
 
 class PostService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, posts: PostRepository) -> None:
         self.db = db
-        self.posts = PostRepository(db)
+        self.posts = posts
 
     def create(self, payload: PostCreate) -> Post:
         post = Post(**payload.model_dump())

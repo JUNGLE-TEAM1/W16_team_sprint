@@ -25,6 +25,7 @@ W16_team_sprint/
     │   ├── main.py
     │   ├── api/
     │   │   ├── __init__.py
+    │   │   ├── dependencies.py
     │   │   └── v1/
     │   │       ├── __init__.py
     │   │       └── posts.py
@@ -56,6 +57,7 @@ W16_team_sprint/
 | 계층 | 파일 | 책임 |
 | --- | --- | --- |
 | API 라우터 | `api/v1/posts.py` | HTTP method, URL, status code, 의존성 연결 |
+| 의존성 조립 | `api/dependencies.py` | DB session, repository, service 객체 조립 |
 | 스키마 | `schemas/post.py` | 요청/응답 형태와 검증 규칙 |
 | 서비스 | `services/post_service.py` | 비즈니스 규칙과 트랜잭션 경계 |
 | 레포지토리 | `repositories/post_repository.py` | DB 읽기/쓰기 세부 구현 |
