@@ -391,17 +391,21 @@ backend/tests/test_ai_mcp_flow.py
 backend/tests/test_ai_agent_flow.py
 ```
 
-프론트는 기존 `App.jsx`가 커지고 있으므로 Sprint 6에서 바로 컴포넌트 분리를 검토합니다.
+프론트는 Sprint 6 진행 중 `App.tsx + useBoardController.ts + components/*.tsx` 구조로 분리했습니다.
+따라서 이후 AI 글쓰기 보조 UI도 `App.tsx`에 직접 쌓기보다, 기존 분리 기준을 유지해서 별도 컴포넌트와 API 모듈로 붙입니다.
 
 ```text
-frontend/src/components/PostList.jsx
-frontend/src/components/PostDetail.jsx
-frontend/src/components/PostComposer.jsx
-frontend/src/components/AiWritingAssistant.jsx
-frontend/src/api/client.js
+frontend/src/App.tsx
+frontend/src/hooks/useBoardController.ts
+frontend/src/components/PostList.tsx
+frontend/src/components/PostDetail.tsx
+frontend/src/components/ComposeModal.tsx
+frontend/src/components/AiWritingAssistant.tsx
+frontend/src/api/client.ts
 ```
 
-단, 시간 부족 시에는 `App.jsx` 안에 먼저 구현하고, 안정화 후 분리합니다.
+`PostList`, `PostDetail`, `ComposeModal`은 이미 분리된 게시판 UI입니다.
+Sprint 6 이후 AI 기능을 붙일 때는 `AiWritingAssistant.tsx` 같은 별도 컴포넌트를 만들고, API 호출은 필요하면 `frontend/src/api/client.ts`로 분리합니다.
 
 ## 10. 완료 기준
 
@@ -426,4 +430,3 @@ Agent는 RAG/MCP 결과를 사용해 초안과 태그를 제안한다.
 AI 결과는 자동 저장하지 않고 사용자가 적용해야 저장한다.
 Sprint 6 MVP는 유사 글 추천, GitHub Issue 참고자료, 초안/태그 제안까지다.
 ```
-

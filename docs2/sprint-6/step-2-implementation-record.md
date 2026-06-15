@@ -132,8 +132,11 @@ sequenceDiagram
 
 ```text
 1. POST /api/v1/posts 요청
-   - 코드: frontend/src/App.jsx
-   - 확인: 게시글 작성 submit에서 /api/v1/posts로 요청을 보낸다.
+   - 코드: frontend/src/components/ComposeModal.tsx
+   - 확인: 게시글 작성 form submit이 발생하는 UI 위치다.
+   - 코드: frontend/src/hooks/useBoardController.ts
+   - 함수: createPost(event)
+   - 확인: /api/v1/posts로 요청을 보내고, 공통 request()를 통해 session cookie를 포함한다.
 
 2. PostService dependency 생성 요청
    - 코드: backend/app/api/v1/posts.py

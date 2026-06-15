@@ -600,7 +600,7 @@ Sprint 2에서는 401을 명확히 구현합니다.
 
 ```mermaid
 flowchart TD
-    User["0. 사용자"] --> UI["React UI<br/>frontend/src/App.jsx"]
+    User["0. 사용자"] --> UI["React UI<br/>App.tsx + useBoardController.ts + components/*.tsx"]
 
     subgraph REG["회원가입 흐름 (1-5)"]
         R1["1. 회원가입 버튼 클릭"]

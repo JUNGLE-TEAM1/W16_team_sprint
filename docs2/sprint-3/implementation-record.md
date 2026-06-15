@@ -52,7 +52,10 @@ backend/tests/test_post_service.py
 backend/tests/test_posts_flow.py
 backend/tests/test_comments_flow.py
 frontend/index.html
-frontend/src/App.jsx
+frontend/src/App.tsx
+frontend/src/hooks/useBoardController.ts
+frontend/src/components/PostDetail.tsx
+frontend/src/components/ComposeModal.tsx
 frontend/src/styles.css
 ```
 
@@ -206,7 +209,10 @@ sequenceDiagram
 코드에서 볼 것:
 
 ```text
-- frontend/src/App.jsx
+- frontend/src/components/PostDetail.tsx
+   - 게시글 수정 form과 수정 버튼 UI
+
+- frontend/src/hooks/useBoardController.ts
    - updatePost(event)
 
 - backend/app/api/v1/posts.py
@@ -296,7 +302,10 @@ sequenceDiagram
 코드에서 볼 것:
 
 ```text
-- frontend/src/App.jsx
+- frontend/src/components/PostDetail.tsx
+   - 게시글 삭제 버튼 UI
+
+- frontend/src/hooks/useBoardController.ts
    - deletePost()
 
 - backend/app/api/v1/posts.py
@@ -395,7 +404,10 @@ sequenceDiagram
 코드에서 볼 것:
 
 ```text
-- frontend/src/App.jsx
+- frontend/src/components/PostDetail.tsx
+   - 댓글 작성 form과 댓글 목록 UI
+
+- frontend/src/hooks/useBoardController.ts
    - createComment(event)
    - loadComments(postId, options)
 
@@ -484,7 +496,10 @@ sequenceDiagram
 코드에서 볼 것:
 
 ```text
-- frontend/src/App.jsx
+- frontend/src/components/PostDetail.tsx
+   - 댓글 삭제 버튼 UI
+
+- frontend/src/hooks/useBoardController.ts
    - deleteComment(commentId)
 
 - backend/app/api/v1/comments.py
@@ -503,7 +518,21 @@ sequenceDiagram
 
 ## 10. Frontend 변경
 
-`frontend/src/App.jsx`는 Sprint 3 확인용 UI로 확장했습니다.
+현재 프론트는 Sprint 3 확인용 UI가 아래처럼 분리되어 있습니다.
+
+```text
+frontend/src/App.tsx
+  화면 조립
+
+frontend/src/hooks/useBoardController.ts
+  게시글 CRUD, 댓글 CRUD, 공통 request() 흐름
+
+frontend/src/components/PostDetail.tsx
+  게시글 상세, 수정/삭제 버튼, 댓글 작성/목록/삭제 UI
+
+frontend/src/components/ComposeModal.tsx
+  게시글 작성 UI
+```
 
 확인 가능한 사용자 행동:
 
