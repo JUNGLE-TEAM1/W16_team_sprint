@@ -59,6 +59,28 @@ frontend/src/components/ComposeModal.tsx
 frontend/src/styles.css
 ```
 
+### 3.1 현재 프론트 hook 리팩터링 기준
+
+Sprint 3 구현 당시에는 게시글 CRUD와 댓글 CRUD가 `useBoardController.ts`에 함께 있었습니다. 2026-06-16 hook 리팩터링 이후 현재 코드는 아래처럼 나뉘었습니다.
+
+```text
+frontend/src/hooks/usePosts.ts
+  selectPost(), createPost(), updatePost(), deletePost(), likePost()
+  selectedPost, postForm, editForm, isEditingPost
+
+frontend/src/hooks/useComments.ts
+  loadComments(), createComment(), deleteComment()
+  comments, commentForm
+
+frontend/src/hooks/useApiRequest.ts
+  request()
+
+frontend/src/hooks/useBoardController.ts
+  usePosts/useComments/useApiRequest를 조립하고, 게시글 작성 후 댓글 조회 같은 후속 흐름을 연결
+```
+
+따라서 이 문서에서 `useBoardController.ts updatePost/createComment/deleteComment`처럼 적힌 함수는 현재 코드 기준으로 `usePosts.ts` 또는 `useComments.ts`에서 먼저 확인하면 됩니다.
+
 ## 4. 남긴 API
 
 ```text
@@ -213,6 +235,9 @@ sequenceDiagram
    - 게시글 수정 form과 수정 버튼 UI
 
 - frontend/src/hooks/useBoardController.ts
+   - updatePost(event)를 usePosts.ts로 위임하는 조립 흐름
+
+- frontend/src/hooks/usePosts.ts
    - updatePost(event)
 
 - backend/app/api/v1/posts.py
@@ -305,8 +330,11 @@ sequenceDiagram
 - frontend/src/components/PostDetail.tsx
    - 게시글 삭제 버튼 UI
 
-- frontend/src/hooks/useBoardController.ts
+- frontend/src/hooks/usePosts.ts
    - deletePost()
+
+- frontend/src/hooks/useBoardController.ts
+   - usePosts.deletePost() 성공 후 댓글, RAG 추천, 목록 상태를 정리하는 조립 흐름
 
 - backend/app/api/v1/posts.py
    - delete_post(post_id, current_user, service)
@@ -407,9 +435,12 @@ sequenceDiagram
 - frontend/src/components/PostDetail.tsx
    - 댓글 작성 form과 댓글 목록 UI
 
-- frontend/src/hooks/useBoardController.ts
+- frontend/src/hooks/useComments.ts
    - createComment(event)
    - loadComments(postId, options)
+
+- frontend/src/hooks/useBoardController.ts
+   - 게시글 선택 후 useComments.loadComments()를 호출하는 조립 흐름
 
 - backend/app/api/v1/comments.py
    - create_comment(post_id, payload, current_user, service)
@@ -499,8 +530,11 @@ sequenceDiagram
 - frontend/src/components/PostDetail.tsx
    - 댓글 삭제 버튼 UI
 
-- frontend/src/hooks/useBoardController.ts
+- frontend/src/hooks/useComments.ts
    - deleteComment(commentId)
+
+- frontend/src/hooks/useBoardController.ts
+   - useComments.deleteComment(commentId)를 App.tsx에 board.deleteComment 형태로 연결
 
 - backend/app/api/v1/comments.py
    - delete_comment(comment_id, current_user, service)
@@ -525,7 +559,16 @@ frontend/src/App.tsx
   화면 조립
 
 frontend/src/hooks/useBoardController.ts
-  게시글 CRUD, 댓글 CRUD, 공통 request() 흐름
+  게시글/댓글 hook 조립과 후속 흐름 연결
+
+frontend/src/hooks/usePosts.ts
+  게시글 선택, 작성, 수정, 삭제, 좋아요, 작성/수정 폼 상태
+
+frontend/src/hooks/useComments.ts
+  댓글 목록, 댓글 작성/삭제, 댓글 폼 상태
+
+frontend/src/hooks/useApiRequest.ts
+  공통 request() 흐름
 
 frontend/src/components/PostDetail.tsx
   게시글 상세, 수정/삭제 버튼, 댓글 작성/목록/삭제 UI

@@ -391,21 +391,27 @@ backend/tests/test_ai_mcp_flow.py
 backend/tests/test_ai_agent_flow.py
 ```
 
-프론트는 Sprint 6 진행 중 `App.tsx + useBoardController.ts + components/*.tsx` 구조로 분리했습니다.
-따라서 이후 AI 글쓰기 보조 UI도 `App.tsx`에 직접 쌓기보다, 기존 분리 기준을 유지해서 별도 컴포넌트와 API 모듈로 붙입니다.
+프론트는 Sprint 6 진행 중 `App.tsx + useBoardController.ts + feature hooks + components/*.tsx` 구조로 정리했습니다.
+따라서 이후 AI 글쓰기 보조 UI도 `App.tsx`에 직접 쌓기보다, 기존 분리 기준을 유지해서 별도 컴포넌트와 기능별 hook으로 붙입니다.
 
 ```text
 frontend/src/App.tsx
 frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useApiRequest.ts
+frontend/src/hooks/useAuth.ts
+frontend/src/hooks/usePostSearch.ts
+frontend/src/hooks/usePosts.ts
+frontend/src/hooks/useComments.ts
+frontend/src/hooks/useRelatedPosts.ts
 frontend/src/components/PostList.tsx
 frontend/src/components/PostDetail.tsx
 frontend/src/components/ComposeModal.tsx
 frontend/src/components/AiWritingAssistant.tsx
-frontend/src/api/client.ts
 ```
 
 `PostList`, `PostDetail`, `ComposeModal`은 이미 분리된 게시판 UI입니다.
-Sprint 6 이후 AI 기능을 붙일 때는 `AiWritingAssistant.tsx` 같은 별도 컴포넌트를 만들고, API 호출은 필요하면 `frontend/src/api/client.ts`로 분리합니다.
+Sprint 6 이후 AI 기능을 붙일 때는 `AiWritingAssistant.tsx` 같은 별도 컴포넌트를 만들고, 공통 fetch는 현재처럼 `useApiRequest.ts`의 `request()`를 사용합니다.
+특정 AI 기능이 더 커지면 `useRelatedPosts.ts`처럼 별도 hook으로 분리하고, endpoint별 API module은 필요해졌을 때 추가합니다.
 
 ## 10. 완료 기준
 

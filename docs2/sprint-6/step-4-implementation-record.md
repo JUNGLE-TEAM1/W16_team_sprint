@@ -47,7 +47,13 @@ frontend/src/App.tsx
 frontend/src/components/ComposeModal.tsx
 frontend/src/components/PostDetail.tsx
 frontend/src/components/RelatedPostsPanel.tsx
+frontend/src/hooks/useApiRequest.ts
+frontend/src/hooks/useAuth.ts
 frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useComments.ts
+frontend/src/hooks/usePostSearch.ts
+frontend/src/hooks/usePosts.ts
+frontend/src/hooks/useRelatedPosts.ts
 frontend/src/styles.css
 frontend/src/types.ts
 frontend/src/utils/postFormatting.ts
@@ -67,20 +73,25 @@ docs2/sprint-6/step-4-implementation-record.md
 sequenceDiagram
     participant User as User
     participant Form as ComposeModal/PostEditForm
-    participant Controller as useBoardController
+    participant PostsHook as usePosts
+    participant Board as useBoardController
+    participant Hook as useRelatedPosts
     participant Timer as 3000ms debounce
     participant API as RAG API
     participant App as App.tsx
     participant Panel as RelatedPostsPanel
 
     User->>Form: 1. 제목/본문/태그 입력
-    Form->>Controller: 2. postForm 또는 editForm 갱신
-    Controller->>Timer: 3. 추천 조건 확인 후 debounce timer 등록
-    Timer-->>Controller: 4. 3000ms 동안 입력이 없으면 timeout 발생
-    Controller->>API: 5. POST /api/v1/ai/rag/related-posts 요청
-    API-->>Controller: 6. RelatedPostsResponse 반환
-    Controller-->>App: 7. relatedPosts state 반환
-    App->>Panel: 8. 추천 패널에 state 전달
+    Form->>PostsHook: 2. postForm 또는 editForm 갱신
+    PostsHook-->>Board: 3. 최신 form state 반환
+    Board->>Hook: 4. form state와 인증/화면 상태 전달
+    Hook->>Timer: 5. 추천 조건 확인 후 debounce timer 등록
+    Timer-->>Hook: 6. 3000ms 동안 입력이 없으면 timeout 발생
+    Hook->>API: 7. POST /api/v1/ai/rag/related-posts 요청
+    API-->>Hook: 8. RelatedPostsResponse 반환
+    Hook-->>Board: 9. relatedPosts state 반환
+    Board-->>App: 10. board.composeRelatedPosts/editRelatedPosts 반환
+    App->>Panel: 11. 추천 패널에 state 전달
 ```
 
 다이어그램 번호와 같은 순서로 코드를 보면 됩니다.
@@ -94,40 +105,55 @@ sequenceDiagram
    - 확인: 작성 모달과 수정 폼의 input/textarea가 같은 PostFormState 구조를 사용한다.
 
 2. postForm 또는 editForm 갱신
-   - 코드: frontend/src/hooks/useBoardController.ts
-   - 함수: updatePostForm(), updateEditForm(), updateForm()
+   - 코드: frontend/src/hooks/usePosts.ts
+   - 함수: updatePostForm(), updateEditForm()
    - 확인: 사용자가 입력하면 postForm 또는 editForm state가 바뀐다.
 
-3. 추천 조건 확인 후 debounce timer 등록
+3. 최신 form state 반환
    - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: usePosts()
+   - 확인: useBoardController가 usePosts에서 받은 postForm/editForm을 현재 board state로 들고 있다.
+
+4. form state와 인증/화면 상태 전달
+   - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: useRelatedPosts()
+   - 확인: postForm, editForm, 로그인 여부, 작성 모달 열림 여부, 수정 모드 여부, selectedPostId를 RAG 전용 hook으로 넘긴다.
+
+5. 추천 조건 확인 후 debounce timer 등록
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: scheduleRelatedPosts(), buildRelatedRequestKey()
    - 확인: 로그인 상태, 작성/수정 화면 활성화 여부, title+content 20자 이상, 중복 payload 여부를 확인한다.
 
-4. 3000ms 동안 입력이 없으면 timeout 발생
-   - 코드: frontend/src/hooks/useBoardController.ts
+6. 3000ms 동안 입력이 없으면 timeout 발생
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: scheduleRelatedPosts()
    - 확인: `RELATED_POSTS_DEBOUNCE_MS = 3000` 기준으로 `window.setTimeout()`을 등록하고, 입력이 바뀌면 cleanup으로 이전 timer를 취소한다.
 
-5. POST /api/v1/ai/rag/related-posts 요청
-   - 코드: frontend/src/hooks/useBoardController.ts
+7. POST /api/v1/ai/rag/related-posts 요청
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: loadRelatedPosts()
    - 코드: frontend/src/utils/postFormatting.ts
    - 함수: buildRelatedPostsPayload()
    - 확인: title/content는 trim하고, tags는 comma string을 배열로 변환하며, 수정 화면에서는 exclude_post_id를 같이 보낸다.
 
-6. RelatedPostsResponse 반환
-   - 코드: frontend/src/hooks/useBoardController.ts
-   - 함수: loadRelatedPosts(), request()
+8. RelatedPostsResponse 반환
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
+   - 함수: loadRelatedPosts()
    - 확인: 응답이 성공이고 최신 requestId와 일치할 때만 items를 state에 반영한다. 실패하면 작성 흐름을 막지 않고 빈 추천 상태로 둔다.
 
-7. relatedPosts state 반환
+9. relatedPosts state 반환
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
+   - 반환값: composeRelatedPosts, editRelatedPosts
+   - 확인: RAG 전용 hook이 작성 화면과 수정 화면의 추천 상태를 따로 반환한다.
+
+10. board.composeRelatedPosts/editRelatedPosts 반환
    - 코드: frontend/src/hooks/useBoardController.ts
    - 반환값: composeRelatedPosts, editRelatedPosts
    - 코드: frontend/src/App.tsx
    - 컴포넌트: App
    - 확인: 작성 모달에는 composeRelatedPosts, 수정 폼에는 editRelatedPosts를 각각 전달한다.
 
-8. 추천 패널에 state 전달
+11. 추천 패널에 state 전달
    - 코드: frontend/src/components/RelatedPostsPanel.tsx
    - 컴포넌트: RelatedPostsPanel
    - 확인: 로딩 중이면 "유사글 찾는 중"을 보여주고, 결과가 있으면 title/content_preview/tags/similarity 카드만 표시한다.
@@ -138,48 +164,74 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as User
-    participant Controller as useBoardController
+    participant PostsHook as usePosts
+    participant Board as useBoardController
+    participant Hook as useRelatedPosts
     participant Timer as 3000ms debounce
     participant API as RAG API
 
-    User->>Controller: 1. 입력 A로 form state 변경
-    Controller->>Timer: 2. requestId=1 timer 등록
-    User->>Controller: 3. 입력 B로 form state 변경
-    Controller->>Timer: 4. 이전 timer 취소 후 requestId=2로 갱신
-    Timer->>API: 5. 최신 입력 B만 RAG API 요청
-    API-->>Controller: 6. 응답 requestId가 최신이면 state 반영
+    User->>PostsHook: 1. 입력 A로 form state 변경
+    PostsHook-->>Board: 2. 입력 A state 반환
+    Board->>Hook: 3. 입력 A state 전달
+    Hook->>Timer: 4. requestId=1 timer 등록
+    User->>PostsHook: 5. 입력 B로 form state 변경
+    PostsHook-->>Board: 6. 입력 B state 반환
+    Board->>Hook: 7. 입력 B state 전달
+    Hook->>Timer: 8. 이전 timer 취소 후 requestId=2로 갱신
+    Timer->>API: 9. 최신 입력 B만 RAG API 요청
+    API-->>Hook: 10. 응답 requestId가 최신이면 state 반영
 ```
 
 다이어그램 번호와 같은 순서로 코드를 보면 됩니다.
 
 ```text
 1. 입력 A로 form state 변경
-   - 코드: frontend/src/hooks/useBoardController.ts
+   - 코드: frontend/src/hooks/usePosts.ts
    - 함수: updatePostForm(), updateEditForm()
    - 확인: 사용자가 입력할 때마다 React state가 먼저 바뀐다.
 
-2. requestId=1 timer 등록
+2. 입력 A state 반환
    - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: usePosts()
+   - 확인: useBoardController가 usePosts에서 바뀐 form state를 받아 board state로 조립한다.
+
+3. 입력 A state 전달
+   - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: useRelatedPosts()
+   - 확인: useBoardController는 form state를 useRelatedPosts에 넘기고, RAG 동작 자체는 useRelatedPosts에 맡긴다.
+
+4. requestId=1 timer 등록
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: scheduleRelatedPosts()
    - 확인: relatedRequestIds.current[scope] 값을 증가시키고, 3000ms timer를 등록한다.
 
-3. 입력 B로 form state 변경
-   - 코드: frontend/src/hooks/useBoardController.ts
+5. 입력 B로 form state 변경
+   - 코드: frontend/src/hooks/usePosts.ts
    - 함수: updatePostForm(), updateEditForm()
    - 확인: timer가 끝나기 전에 새 입력이 들어오면 effect dependency가 바뀐다.
 
-4. 이전 timer 취소 후 requestId=2로 갱신
+6. 입력 B state 반환
    - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: usePosts()
+   - 확인: useBoardController가 새 form state를 다시 조립한다.
+
+7. 입력 B state 전달
+   - 코드: frontend/src/hooks/useBoardController.ts
+   - hook: useRelatedPosts()
+   - 확인: 바뀐 form state가 다시 RAG 전용 hook으로 전달된다.
+
+8. 이전 timer 취소 후 requestId=2로 갱신
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: scheduleRelatedPosts()
    - 확인: useEffect cleanup이 이전 timer를 취소하고, 새 입력 기준 requestId를 다시 만든다.
 
-5. 최신 입력 B만 RAG API 요청
-   - 코드: frontend/src/hooks/useBoardController.ts
+9. 최신 입력 B만 RAG API 요청
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: loadRelatedPosts()
    - 확인: debounce가 끝난 최신 입력만 `/api/v1/ai/rag/related-posts`로 전송된다.
 
-6. 응답 requestId가 최신이면 state 반영
-   - 코드: frontend/src/hooks/useBoardController.ts
+10. 응답 requestId가 최신이면 state 반영
+   - 코드: frontend/src/hooks/useRelatedPosts.ts
    - 함수: loadRelatedPosts()
    - 확인: requestId가 relatedRequestIds.current[scope]와 다르면 오래된 응답으로 보고 화면에 반영하지 않는다.
 ```
@@ -236,16 +288,22 @@ sequenceDiagram
 2. frontend/src/components/PostDetail.tsx
    - 게시글 수정 form에서 RelatedPostsPanel을 어떻게 재사용하는지 본다.
 
-3. frontend/src/hooks/useBoardController.ts
+3. frontend/src/hooks/usePosts.ts
+   - postForm/editForm, updatePostForm(), updateEditForm()이 작성/수정 입력 상태를 어떻게 관리하는지 본다.
+
+4. frontend/src/hooks/useBoardController.ts
+   - useRelatedPosts()에 어떤 state를 넘기는지 본다.
+
+5. frontend/src/hooks/useRelatedPosts.ts
    - scheduleRelatedPosts(), loadRelatedPosts()를 중심으로 debounce, 중복 방지, stale response 방지를 본다.
 
-4. frontend/src/utils/postFormatting.ts
+6. frontend/src/utils/postFormatting.ts
    - buildRelatedPostsPayload()가 백엔드 RAG API 요청 body를 어떻게 만드는지 본다.
 
-5. frontend/src/components/RelatedPostsPanel.tsx
+7. frontend/src/components/RelatedPostsPanel.tsx
    - 추천 결과를 어떤 필드만 화면에 보여주는지 본다.
 
-6. frontend/src/styles.css
+8. frontend/src/styles.css
    - .compose-layout, .edit-layout, .related-panel 스타일을 본다.
 ```
 

@@ -44,6 +44,26 @@ docs/repository-overall-flow.md
 README.md
 ```
 
+### 3.1 현재 프론트 hook 리팩터링 기준
+
+Sprint 2 구현 당시에는 프론트 요청 흐름 대부분이 `useBoardController.ts`에 있었습니다. 2026-06-16 기준으로는 hook 리팩터링을 진행해서 아래처럼 책임이 나뉘었습니다.
+
+```text
+frontend/src/hooks/useApiRequest.ts
+  공통 request(), fetch(..., credentials: "include"), status 메시지
+
+frontend/src/hooks/useAuth.ts
+  register(), login(), loadMe(), logout()
+
+frontend/src/hooks/usePosts.ts
+  createPost(), 게시글 작성 폼 상태
+
+frontend/src/hooks/useBoardController.ts
+  useAuth/usePosts/useApiRequest를 조립하고 App.tsx에 board.* 형태로 반환
+```
+
+따라서 이 문서에서 `useBoardController.ts의 register/login/loadMe/createPost/logout`라고 적힌 부분은 현재 코드 기준으로는 `useAuth.ts`, `usePosts.ts`, `useApiRequest.ts`를 함께 보면 됩니다.
+
 ## 4. 제거한 것
 
 아래 코드는 더 이상 프로젝트 기본 인증 방식에 포함하지 않습니다.
@@ -170,7 +190,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A1["1. 사용자가 React UI에서 버튼 클릭"] --> A2["2. useBoardController.ts의 register/login/loadMe/createPost/logout 실행"]
+    A1["1. 사용자가 React UI에서 버튼 클릭"] --> A2["2. useAuth/usePosts 함수 실행<br/>useBoardController.ts가 조립"]
     A2 --> A3["3. request(endpoint, options) 호출"]
     A3 --> A4["4. fetch(..., credentials: include)"]
     A4 --> A5["5. FastAPI main.py"]
@@ -187,7 +207,8 @@ flowchart LR
 말로 설명하면:
 
 ```text
-사용자 행동은 App.tsx가 배치한 컴포넌트에서 발생하고, 실제 이벤트 함수는 useBoardController.ts에 있다.
+사용자 행동은 App.tsx가 배치한 컴포넌트에서 발생하고, App은 useBoardController.ts가 반환한 board.* 함수를 props로 내려준다.
+현재 코드에서는 인증 이벤트는 useAuth.ts, 게시글 작성은 usePosts.ts, 공통 fetch는 useApiRequest.ts에 있다.
 이벤트 함수는 직접 fetch를 만들지 않고 공통 request()를 사용한다.
 request()는 credentials: "include"를 붙여 session_id cookie가 같이 갈 수 있게 한다.
 백엔드는 main.py에서 router를 등록하고, router는 service를 dependency로 받아 실제 처리를 맡긴다.
@@ -200,7 +221,15 @@ frontend/src/App.tsx
 - App(): 화면 조립과 컴포넌트 배치 시작점
 
 frontend/src/hooks/useBoardController.ts
-- login(event), loadMe(options), createPost(event), logout(): 사용자 행동 처리 함수
+- useAuth/usePosts/useApiRequest를 조립해서 App.tsx에 board.* 형태로 반환
+
+frontend/src/hooks/useAuth.ts
+- register(event), login(event), loadMe(options), logout(): Session 인증 사용자 행동 처리
+
+frontend/src/hooks/usePosts.ts
+- createPost(event): 보호 API인 게시글 작성 요청 처리
+
+frontend/src/hooks/useApiRequest.ts
 - request(endpoint, options): 모든 API 요청이 지나가는 공통 fetch 함수
 - 확인할 줄: credentials: "include"
 
@@ -229,7 +258,7 @@ backend/app/api/dependencies.py
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as "AuthPanel.tsx + useBoardController.ts"
+    participant UI as "AuthPanel.tsx + useAuth.ts"
     participant AuthAPI as "auth.py"
     participant Service as "AuthService"
     participant UserRepo as "UserRepository"
@@ -264,8 +293,11 @@ sequenceDiagram
 frontend/src/components/AuthPanel.tsx
 - 회원가입 form submit이 발생하는 UI 위치
 
-frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useAuth.ts
 - register(event): /api/v1/auth/register 호출
+
+frontend/src/hooks/useBoardController.ts
+- useAuth.register(event)를 App.tsx에 board.register 형태로 연결
 
 backend/app/api/v1/auth.py
 - register(payload, service): request body를 받고 service.register() 호출
@@ -293,7 +325,7 @@ backend/app/models/user.py
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as "AuthPanel.tsx + useBoardController.ts"
+    participant UI as "AuthPanel.tsx + useAuth.ts"
     participant AuthAPI as "auth.py"
     participant Service as "AuthService"
     participant Security as "security.py"
@@ -328,8 +360,11 @@ sequenceDiagram
 frontend/src/components/AuthPanel.tsx
 - 로그인 form submit이 발생하는 UI 위치
 
-frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useAuth.ts
 - login(event): /api/v1/auth/session/login 호출
+
+frontend/src/hooks/useBoardController.ts
+- useAuth.login(event)를 실행한 뒤 성공하면 게시글 목록을 다시 불러오는 조립 흐름
 
 backend/app/api/v1/auth.py
 - session_login(payload, response, service): 로그인 성공 후 response.set_cookie(...) 실행
@@ -357,7 +392,7 @@ backend/app/repositories/auth_repository.py
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as "useBoardController.ts"
+    participant UI as "useAuth.ts + useApiRequest.ts"
     participant AuthAPI as "auth.py"
     participant Service as "AuthService"
     participant Security as "security.py"
@@ -394,8 +429,10 @@ auth.py의 get_session_user()가 cookie 값을 꺼내 AuthService에 넘긴다.
 코드에서 볼 것:
 
 ```text
-frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useAuth.ts
 - loadMe(options): /api/v1/auth/session/me 호출
+
+frontend/src/hooks/useApiRequest.ts
 - request(endpoint, options): cookie가 같이 가도록 credentials: "include" 사용
 
 backend/app/api/v1/auth.py
@@ -421,7 +458,7 @@ backend/app/repositories/user_repository.py
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as "ComposeModal.tsx + useBoardController.ts"
+    participant UI as "ComposeModal.tsx + usePosts.ts"
     participant PostsAPI as "posts.py"
     participant AuthDep as "get_session_user"
     participant AuthService as "AuthService"
@@ -455,8 +492,11 @@ posts.py의 create_post()는 실행 전에 get_session_user dependency로 curren
 frontend/src/components/ComposeModal.tsx
 - 게시글 작성 form submit이 발생하는 UI 위치
 
-frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/usePosts.ts
 - createPost(event): /api/v1/posts 호출
+
+frontend/src/hooks/useBoardController.ts
+- usePosts.createPost(event) 성공 후 목록, 태그, 댓글 상태를 갱신하는 조립 흐름
 
 backend/app/api/v1/posts.py
 - create_post(payload, current_user, service): current_user: User = Depends(get_session_user) 확인
@@ -486,7 +526,7 @@ backend/app/schemas/post.py
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as "TopBar.tsx + useBoardController.ts"
+    participant UI as "TopBar.tsx + useAuth.ts"
     participant AuthAPI as "auth.py"
     participant Service as "AuthService"
     participant Security as "security.py"
@@ -518,8 +558,11 @@ DB row만 지우면 브라우저에는 낡은 cookie가 남고, cookie만 지우
 코드에서 볼 것:
 
 ```text
-frontend/src/hooks/useBoardController.ts
+frontend/src/hooks/useAuth.ts
 - logout(): /api/v1/auth/session/logout 호출
+
+frontend/src/hooks/useBoardController.ts
+- useAuth.logout() 성공 후 상세, 댓글, RAG 추천 상태를 초기화하는 조립 흐름
 
 frontend/src/components/TopBar.tsx
 - 로그아웃 버튼이 있는 UI 위치
@@ -630,7 +673,16 @@ frontend/src/components/TopBar.tsx
   로그인/회원가입/로그아웃 버튼
 
 frontend/src/hooks/useBoardController.ts
-  register(), login(), loadMe(), logout(), createPost(), request()
+  useAuth/usePosts/useApiRequest 조립
+
+frontend/src/hooks/useAuth.ts
+  register(), login(), loadMe(), logout()
+
+frontend/src/hooks/usePosts.ts
+  createPost()
+
+frontend/src/hooks/useApiRequest.ts
+  request()
 ```
 
 남은 사용자 행동:

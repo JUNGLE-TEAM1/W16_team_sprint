@@ -600,7 +600,7 @@ Sprint 2에서는 401을 명확히 구현합니다.
 
 ```mermaid
 flowchart TD
-    User["0. 사용자"] --> UI["React UI<br/>App.tsx + useBoardController.ts + components/*.tsx"]
+    User["0. 사용자"] --> UI["React UI<br/>App.tsx + useBoardController.ts<br/>feature hooks + components/*.tsx"]
 
     subgraph REG["회원가입 흐름 (1-5)"]
         R1["1. 회원가입 버튼 클릭"]
@@ -665,6 +665,10 @@ flowchart TD
         Cookie -.-> C3
     end
 ```
+
+현재 프론트 코드 기준으로는 `useBoardController.ts`가 모든 기능을 직접 들고 있지 않습니다.
+Session 인증 흐름은 `frontend/src/hooks/useAuth.ts`가 담당하고, 모든 fetch 공통 처리는 `frontend/src/hooks/useApiRequest.ts`의 `request()`를 통과합니다.
+`useBoardController.ts`는 `useAuth`, `usePosts`, `usePostSearch`, `useComments`, `useRelatedPosts`를 조립해서 `App.tsx`에 같은 `board.*` 인터페이스로 넘기는 역할입니다.
 
 다이어그램 읽는 법:
 
