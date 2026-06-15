@@ -1,6 +1,18 @@
-# 스프린트 2 인증/인가 흐름
+# 스프린트 2 Session 인증/인가 흐름
 
-이번 스프린트 예제는 같은 사용자 계정으로 세 가지 인증 방식을 비교합니다.
+Sprint 2는 **Session only** 기준으로 진행합니다.
+
+JWT access token과 access/refresh token pair 코드는 이번 구현에서 제거했습니다. OAuth/OIDC는 현재 MVP 필수 범위가 아니며, 추후 소셜 로그인이나 외부 서비스 권한 위임이 필요할 때 다시 다룹니다.
+
+## 목표
+
+```text
+회원가입
+-> Session 로그인
+-> 현재 로그인 사용자 확인
+-> 로그인 사용자만 게시글 작성
+-> 로그아웃
+```
 
 ## 공통 사용자 등록
 
@@ -12,12 +24,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
 
 사용자 비밀번호는 DB에 원문으로 저장하지 않고 PBKDF2 해시로 저장합니다.
 
-## 1. Session 방식
-
-```text
-로그인 -> 서버가 세션 ID 생성 -> 세션 ID 해시를 DB에 저장 -> 브라우저에는 HttpOnly cookie 저장
-요청 -> 브라우저가 cookie 자동 전송 -> 서버가 DB 세션 조회 -> 현재 사용자 확인
-```
+## Session 로그인
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/api/v1/auth/session/login \
@@ -25,73 +32,57 @@ curl -i -X POST http://127.0.0.1:8000/api/v1/auth/session/login \
   -d '{"username":"team1","password":"password123"}'
 ```
 
+서버는 로그인 성공 시 원본 session token을 `HttpOnly` cookie로 내려줍니다.
+
+DB에는 원본 token을 저장하지 않고 `token_hash`, `user_id`, `expires_at`만 저장합니다.
+
+## 현재 사용자 확인
+
 ```bash
 curl http://127.0.0.1:8000/api/v1/auth/session/me \
   -b "session_id=<login response cookie>"
 ```
 
-특징:
-
-- 서버가 세션 상태를 저장합니다.
-- 브라우저 기반 서비스와 잘 맞습니다.
-- cookie를 쓰므로 CSRF 방어 전략을 함께 결정해야 합니다.
-
-## 2. JWT access token 방식
+흐름:
 
 ```text
-로그인 -> 서버가 짧은 만료 시간의 access token 발급
-요청 -> 클라이언트가 Authorization: Bearer <token> 전송 -> 서버가 서명/만료 검증
+Cookie session_id
+-> 서버에서 session_id 원본 token을 hash
+-> auth_sessions.token_hash 조회
+-> expires_at 확인
+-> users.id 조회
+-> 현재 사용자 반환
 ```
 
+## 게시글 작성
+
+게시글 작성은 보호 API입니다. 로그인한 사용자의 session cookie가 필요합니다.
+
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/jwt/login \
+curl -X POST http://127.0.0.1:8000/api/v1/posts \
   -H "Content-Type: application/json" \
-  -d '{"username":"team1","password":"password123"}'
+  -b "session_id=<login response cookie>" \
+  -d '{"title":"Sprint 2","content":"Session 인증으로 작성자를 연결합니다."}'
 ```
+
+성공하면 서버는 `posts.author_id`에 현재 사용자의 id를 저장합니다.
+
+## 로그아웃
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/auth/jwt/me \
-  -H "Authorization: Bearer <access_token>"
+curl -i -X POST http://127.0.0.1:8000/api/v1/auth/session/logout \
+  -b "session_id=<login response cookie>"
 ```
 
-특징:
-
-- 서버가 access token 상태를 저장하지 않습니다.
-- 토큰 만료 전 강제 로그아웃/폐기가 어렵습니다.
-- access token 저장 위치에 따라 XSS 위험이 달라집니다.
-
-## 3. access token + refresh token 방식
-
-```text
-로그인 -> access token + refresh token 발급
-요청 -> access token으로 API 호출
-만료 -> refresh token으로 새 access token과 새 refresh token 재발급
-```
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/token-pair/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"team1","password":"password123"}'
-```
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/token-pair/refresh \
-  -H "Content-Type: application/json" \
-  -d '{"refresh_token":"<refresh_token>"}'
-```
-
-특징:
-
-- access token은 짧게, refresh token은 길게 가져갈 수 있습니다.
-- refresh token은 DB에 해시로 저장하고 재발급 시 회전합니다.
-- refresh token 탈취를 고려해 재사용 감지, 기기별 폐기, 저장 위치 정책이 필요합니다.
+로그아웃 시 서버는 현재 세션 row를 삭제하고, 브라우저에는 `Delete-Cookie` 응답을 보냅니다.
 
 ## 구현 파일
 
-- `backend/app/api/v1/auth.py`: 인증 API endpoint
-- `backend/app/services/auth_service.py`: 인증 비즈니스 로직
-- `backend/app/repositories/auth_repository.py`: 세션/refresh token 저장소
-- `backend/app/repositories/user_repository.py`: 사용자 저장소
-- `backend/app/models/user.py`: 사용자 테이블
-- `backend/app/models/auth.py`: session, refresh token 테이블
-- `backend/app/core/security.py`: 비밀번호 해시, opaque token, JWT 유틸
+- `frontend/src/App.jsx`: Session 전용 회원가입/로그인/내 정보/로그아웃/게시글 작성 UI
+- `backend/app/api/v1/auth.py`: Session auth endpoint와 `get_session_user`
+- `backend/app/services/auth_service.py`: 회원가입, 로그인, 세션 조회, 로그아웃 흐름
+- `backend/app/repositories/auth_repository.py`: `auth_sessions` 조회/저장/삭제
+- `backend/app/repositories/user_repository.py`: 사용자 조회/저장
+- `backend/app/models/user.py`: `users` 테이블
+- `backend/app/models/auth.py`: `auth_sessions` 테이블
+- `backend/app/core/security.py`: 비밀번호 hash, opaque token 생성, session token hash

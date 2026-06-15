@@ -26,9 +26,7 @@ class Settings:
         "AUTH_SECRET_KEY",
         "dev-only-change-me",
     )
-    access_token_expire_minutes: int = _int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 15)
-    refresh_token_expire_days: int = _int_env("REFRESH_TOKEN_EXPIRE_DAYS", 14)
-    session_expire_hours: int = _int_env("SESSION_EXPIRE_HOURS", 8)
+    session_expire_hours: int = _int_env("SESSION_EXPIRE_HOURS", 4)
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "session_id")
     session_cookie_secure: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
     cors_origins: list[str] = None  # type: ignore[assignment]

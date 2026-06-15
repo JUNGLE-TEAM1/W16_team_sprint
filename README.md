@@ -1,91 +1,99 @@
-# W16 팀 스프린트
+# AI 지식 공유 게시판 Sprint Repo
 
-팀 스프린트 학습을 위한 저장소입니다.
+AI 지식 공유 게시판 개인 과제를 위한 Sprint 레포입니다.
 
-이 레포는 나만무 프로젝트를 시작하기 전에 팀원들이 같은 기술 언어로 의사결정할 수 있도록, 핵심 학습 주제와 산출물을 정리하고 공유하는 공간입니다. 목표는 모든 사람이 모든 영역을 같은 깊이로 아는 것이 아니라, 회의에서 막히지 않을 정도의 공통 이해를 맞추는 것입니다.
+이 레포는 팀 프로젝트가 아니라 개인 구현 과제의 기준 레포입니다. 팀은 같은 MVP 시나리오와 같은 기술 스택을 기준으로 각자 구현하고, 싱크 시간에는 구현 방식, 설계 판단, 막힌 부분, 발표 가능한 설명을 비교합니다.
 
-## 학습 기준
+## 서비스 컨셉
 
-학습 주제는 단순히 "중요해 보이는가"가 아니라 아래 기준으로 고릅니다.
+AI 지식 공유 게시판은 개발자와 학습자가 질문, 트러블슈팅, 학습 노트, 참고 자료를 게시글로 공유하고, 이후 AI가 유사 글 탐색, 외부 자료 수집, 글쓰기 보조를 돕는 게시판 서비스입니다.
 
-- 나중에 알면 구조를 크게 바꿔야 하는가
-- 프론트엔드, 백엔드, DB, AI 기능이 함께 영향을 받는가
-- 팀원이 같은 말을 이해하지 못하면 의사결정이 느려지는가
-- 실패했을 때 보안, 데이터, 일정, 품질에 치명적인가
-- 1-2시간 학습 후, 30분-1시간 싱크로 공통 이해를 만들 수 있는가
-
-## 우선 학습 주제
-
-1. API 계약 + 도메인/데이터 모델링 + 요청 흐름
-2. 인증/인가 + 보안 기본
-3. 프로젝트 구조/아키텍처 + 에러 처리/로깅/설정
-4. 프론트엔드-백엔드 연결 방식 + 상태 관리
-5. AI/RAG/LLM 기능 흐름
-6. 비동기 처리/캐싱/실시간/신뢰성
-
-AI 기능이 프로젝트의 핵심 가치라면 `AI/RAG/LLM 기능 흐름`은 2순위까지 올립니다. 반대로 비동기 처리, 캐싱, 실시간 기능은 실제 요구사항이 있을 때 깊게 다룹니다.
-
-## 첫 번째 스프린트
-
-첫 주제는 API 계약과 데이터 흐름입니다.
-
-핵심 질문은 다음과 같습니다.
-
-> 하나의 핵심 기능이 실행될 때, 프론트 요청부터 백엔드 처리, DB 저장, 응답과 에러 처리까지 어떤 흐름으로 지나가는가?
-
-현재 저장소에는 작은 `posts` API 예제가 구현되어 있습니다. 이 예제의 목적은 아래 흐름을 코드로 확인하는 것입니다.
+기본 사용자 흐름은 다음을 기준으로 합니다.
 
 ```text
-클라이언트 요청 -> API 라우터 -> 검증/스키마 -> 서비스 -> 레포지토리 -> DB -> 응답/에러
+회원가입
+-> 로그인
+-> 게시글 작성
+-> 댓글/태그/검색/페이징
+-> RAG 기반 유사 글 추천
+-> MCP 기반 외부 자료 조회
+-> Agent 기반 글쓰기 보조
 ```
 
-## 두 번째 스프린트
+## 기술 스택
 
-두 번째 주제는 인증/인가와 보안 기본입니다.
+| 영역 | 기술 |
+| --- | --- |
+| Frontend | React + Vite |
+| Backend/API | FastAPI |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| AI/RAG DB | pgvector 예정 |
+| Auth | Session 인증을 main auth로 선택 |
 
-현재 저장소에는 같은 사용자 계정을 기준으로 아래 세 가지 인증 방식이 구현되어 있습니다.
+OAuth/OIDC는 현재 필수 구현 범위가 아니며, 필요 시 추후 확장 학습 주제로 다룹니다.
 
-- Session cookie 방식
-- JWT access token 방식
-- access token + refresh token 방식
+## 현재 Sprint 목표
 
-자세한 흐름과 요청 예시는 [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)에 정리되어 있습니다.
+오늘 목표는 Sprint 1과 Sprint 2를 구현 가능한 기준으로 정리하고 완료하는 것입니다.
 
-## 스프린트 산출물
+### Sprint 1. Foundation
 
-각 스프린트가 끝나면 최소 하나 이상의 산출물을 남깁니다.
+목표는 이후 게시판 기능과 Session 인증을 붙일 수 있는 기반을 만드는 것입니다.
 
-- 예시 기능의 요청 흐름
-- API endpoint 초안
-- request/response 예시
-- error response 형식
-- 필요한 DB 테이블과 관계
-- 인증 또는 권한 처리 기준
-- 프로젝트 폴더 구조 초안
-- 체크리스트
-- 아직 결정하지 못한 질문 목록
-- ADR 초안
+현재 확정된 방향:
 
-## 완료 기준
+- FastAPI 앱 구조는 `router / schema / service / repository / model` 계층을 사용합니다.
+- PostgreSQL을 기본 DB로 사용합니다.
+- `Post`는 문자열 작성자(`author_name`)가 아니라 `User` FK 기반으로 변경합니다.
+- `Post`에는 `updated_at`을 포함합니다.
+- 게시글 응답에는 작성자 표시명(`author_display_name`)을 포함합니다.
+- `Comment`, `Tag`는 다음 Sprint에서 구현합니다.
+- Alembic 도입은 보류하고, 오늘은 로컬 DB reset 방식으로 진행합니다.
 
-각 주제는 팀원들이 아래 질문에 답할 수 있을 때 완료로 봅니다.
+Sprint 1 완료 기준:
 
-1. 이 개념은 무엇인가?
-2. 왜 필요한가?
-3. 어떤 선택지가 있는가?
-4. 선택지별 장단점은 무엇인가?
-5. 우리 프로젝트에서는 언제 필요할 가능성이 높은가?
-6. 프론트엔드, 백엔드, DB, AI 중 어디에 영향을 주는가?
-7. 나중에 더 깊게 팔 담당자는 누구인가?
-8. 지금 팀 차원에서 합의할 기본값은 무엇인가?
+```text
+1. FastAPI 서버가 실행된다.
+2. React + Vite 앱이 실행된다.
+3. PostgreSQL 연결이 된다.
+4. User 모델이 있다.
+5. Post 모델이 User와 FK로 연결된다.
+6. Post 생성 또는 조회 API가 동작한다.
+7. 요청 흐름을 router -> schema -> service -> repository -> DB -> response로 설명할 수 있다.
+8. Sprint note에 구조 선택 이유를 남긴다.
+```
 
-## 운영 원칙
+### Sprint 2. Session Auth
 
-지금은 지식을 많이 쌓는 시간이 아니라 팀의 의사결정 언어를 맞추는 시간입니다.
+목표는 Session 기반 회원가입, 로그인, 현재 사용자 확인, 보호 API 연결을 구현하는 것입니다.
 
-따라서 학습은 긴 발표보다 짧은 개인 학습, 핵심 요점 공유, 질문 정리, 팀 합의 산출물 작성에 집중합니다. 매 스프린트의 목표는 "좋은 이야기를 했다"가 아니라, 다음 구현 의사결정에 바로 쓸 수 있는 기준을 남기는 것입니다.
+현재 확정된 방향:
+
+- Session 인증을 main auth 방식으로 사용합니다.
+- 세션은 서버 DB에 저장하고, 클라이언트에는 `HttpOnly` cookie를 내려주는 구조를 기준으로 합니다.
+- CSRF 대응은 `SameSite=Lax`, 명시적 CORS origin 제한을 최소 안전장치로 두고, CSRF token은 후속 검토합니다.
+- Session 만료 시간은 4시간입니다.
+- JWT/token pair 코드는 구현 범위에서 제거합니다.
+- 게시글 작성은 로그인 사용자와 연결합니다.
+- 게시글 수정/삭제 권한은 내일 CRUD Sprint에서 본격 처리합니다.
+
+Sprint 2 완료 기준:
+
+```text
+1. 회원가입이 된다.
+2. Session 로그인이 된다.
+3. 현재 로그인 사용자를 확인할 수 있다.
+4. 로그아웃이 된다.
+5. 인증 없이 보호 API를 호출하면 401이 발생한다.
+6. 로그인 사용자가 게시글 작성 시 author_id와 연결된다.
+7. Session 인증 방식의 장점과 한계를 설명할 수 있다.
+8. Sprint note에 인증 흐름과 선택 이유를 남긴다.
+```
 
 ## 실행 방법
+
+### Backend
 
 ```bash
 cp .env.example .env
@@ -95,44 +103,67 @@ python3.11 -m venv .venv
 .venv/bin/uvicorn backend.app.main:app --reload --env-file .env
 ```
 
-기본 DB는 PostgreSQL입니다. `.env.example`의 `DATABASE_URL`은 `docker-compose.yml`로 실행되는 로컬 PostgreSQL 컨테이너를 가리킵니다.
-
-API 문서는 아래 주소에서 확인할 수 있습니다.
+API 문서:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-## 테스트 방법
+### Frontend
 
-테스트도 같은 PostgreSQL DB를 사용합니다.
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+프론트엔드 개발 서버:
+
+```text
+http://127.0.0.1:5173
+```
+
+## 테스트 방법
 
 ```bash
 docker compose up -d db
-./.venv/bin/python -m pytest backend/tests
+.venv/bin/python -m pytest backend/tests
 ```
 
-## 요청 예시
+테스트도 PostgreSQL을 사용합니다. 로컬 DB schema를 크게 바꾼 뒤 테스트가 꼬이면 학습용 데이터 reset이 필요할 수 있습니다.
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/posts \
-  -H "Content-Type: application/json" \
-  -d '{"title":"스프린트 1","content":"API와 DB 흐름","author_name":"team1"}'
-```
+## 주요 코드 위치
 
-```bash
-curl http://127.0.0.1:8000/api/v1/posts
-```
-
-```bash
-curl http://127.0.0.1:8000/api/v1/posts/1
-```
+| 영역 | 파일 |
+| --- | --- |
+| FastAPI app | `backend/app/main.py` |
+| DB 설정 | `backend/app/db/session.py` |
+| 공통 설정 | `backend/app/core/config.py` |
+| 공통 에러 | `backend/app/core/errors.py` |
+| 보안 유틸 | `backend/app/core/security.py` |
+| 인증 API | `backend/app/api/v1/auth.py` |
+| 게시글 API | `backend/app/api/v1/posts.py` |
+| 인증 서비스 | `backend/app/services/auth_service.py` |
+| 게시글 서비스 | `backend/app/services/post_service.py` |
+| DB 모델 | `backend/app/models/` |
+| React UI | `frontend/src/App.jsx` |
 
 ## 문서
 
-- [학습 우선순위 정리](learning-priorities.md)
+- [스프린트 운영 문서](docs/ai_knowledge_board_sprint_plan.md)
+- [레포지토리 전체 흐름](docs/repository-overall-flow.md)
+- [Sprint 1 Foundation 설계 의사결정 가이드](docs/sprint-notes/sprint-01-foundation-decisions.md)
+- [Sprint 1 구현 기록](docs2/sprint-1/implementation-record.md)
+- [Sprint 2 Session 인증 의사결정과 전체 흐름](docs2/sprint-2/session-auth-decision-and-flow.md)
+- [Sprint 2 구현 기록](docs2/sprint-2/implementation-record.md)
 - [스프린트 1 파일 구조](docs/sprint-1-file-structure.md)
 - [스프린트 1 API 데이터 흐름](docs/sprint-1-api-data-flow.md)
-- [스프린트 1 개인 학습 가이드](docs/sprint-1-study-guide.md)
 - [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)
 - [스프린트 2 실행 흐름 가이드](docs/sprint-2-execution-flow-guide.md)
+- [Sprint 2 인증/인가 개념 가이드](docs/sprint-2/auth-security-concepts.md)
+
+## 다음 Sprint로 넘긴 결정
+
+- 게시글 수정/삭제 권한을 `403 Forbidden`으로 처리합니다.
+- CSRF token 또는 Origin 검증 추가 여부를 상태 변경 API가 늘어나는 시점에 다시 결정합니다.
+- 만료된 session cleanup 전략을 추후 결정합니다.

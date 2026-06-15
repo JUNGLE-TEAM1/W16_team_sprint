@@ -14,10 +14,6 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str = Field(min_length=1)
-
-
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,17 +24,4 @@ class UserRead(BaseModel):
 
 
 class AuthUserResponse(BaseModel):
-    user: UserRead
-
-
-class AccessTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserRead
-
-
-class TokenPairResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
     user: UserRead
