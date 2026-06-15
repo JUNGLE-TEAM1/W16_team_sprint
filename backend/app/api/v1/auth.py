@@ -14,11 +14,17 @@ from backend.app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
     RefreshRequest,
+    SignupRequest,
     TokenResponse,
 )
 from backend.app.services.auth_service import AuthContext
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def signup(payload: SignupRequest, service: AuthServiceDependency) -> TokenResponse:
+    return service.signup(payload)
 
 
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)

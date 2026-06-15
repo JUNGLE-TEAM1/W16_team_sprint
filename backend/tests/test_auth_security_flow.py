@@ -36,6 +36,28 @@ def test_login_and_call_protected_me_endpoint() -> None:
     assert response.json()["role"] == "member"
 
 
+def test_signup_creates_user_and_returns_login_tokens() -> None:
+    signup_response = client.post(
+        "/api/v1/auth/signup",
+        json={"email": "new@sprint.local", "password": "password123"},
+    )
+
+    assert signup_response.status_code == 201
+    tokens = signup_response.json()
+    me_response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+    )
+    assert me_response.status_code == 200
+    assert me_response.json()["email"] == "new@sprint.local"
+
+    duplicate_response = client.post(
+        "/api/v1/auth/signup",
+        json={"email": "new@sprint.local", "password": "password123"},
+    )
+    assert duplicate_response.status_code == 409
+
+
 def test_member_cannot_call_admin_endpoint() -> None:
     tokens = login()
 

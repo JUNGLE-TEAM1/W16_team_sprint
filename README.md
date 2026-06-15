@@ -122,3 +122,48 @@ curl http://127.0.0.1:8000/api/v1/posts/1
 - [학습 우선순위 정리](learning-priorities.md)
 - [스프린트 1 파일 구조](docs/sprint-1-file-structure.md)
 - [스프린트 1 API 데이터 흐름](docs/sprint-1-api-data-flow.md)
+## Sprint 로드맵 업데이트
+
+- Sprint 1은 API 계약, 데이터 흐름, 기본 구조를 이미 진행한 기준 스프린트로 둡니다.
+- Sprint 2는 회원가입/로그인과 인증/인가를 구현 완료형 기준으로 둡니다.
+- Sprint 3 아키텍처/프로젝트 구조는 별도 이론 스프린트로 크게 잡지 않고, 기능 구현 중 `router/service/repository/schema/model`로 계속 적용합니다.
+- Sprint 4 프론트-백엔드 연결은 모든 기능 스프린트의 완료 기준에 포함합니다.
+- 기준: API만 끝나면 미완료. React 화면에서 실제로 사용할 수 있어야 완료.
+- 전체 기준은 [Sprint 로드맵](docs/sprint-roadmap.md)을 참고하세요.
+## Sprint 6 RAG 구현
+
+이번 RAG는 MCP/Agent 없이 게시판 내부 데이터만 사용합니다.
+
+구조:
+
+```text
+글 작성/수정
+-> title + content + tag 텍스트를 embedding
+-> post_embeddings 테이블에 vector_json으로 저장
+-> 글 작성 폼의 RAG duplicate check 버튼
+-> POST /api/v1/rag/assist
+-> 현재 초안 embedding과 기존 글 embedding 유사도 계산
+-> 유사 게시글, 중복 위험도, 간단 요약/추천 문구 반환
+-> React 화면에 결과 표시
+```
+
+현재 구현은 embedding으로 후보 글을 찾은 뒤 OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서만 deterministic embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
+
+## OpenAI API 설정
+
+RAG 임베딩은 `.env`에서 OpenAI API 사용 준비가 되어 있습니다.
+
+```env
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=1536
+OPENAI_LLM_MODEL=gpt-4o-mini
+OPENAI_LLM_MAX_OUTPUT_TOKENS=700
+OPENAI_TIMEOUT_SECONDS=20
+```
+
+`OPENAI_API_KEY`가 비어 있으면 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 `POST /api/v1/rag/assist`가 OpenAI embedding API와 OpenAI Responses API 기반 LLM 추천을 사용합니다.
+
+기존에 64차원 로컬 벡터가 저장되어 있어도, OpenAI 1536차원 설정으로 바뀌면 RAG 실행 시 기존 게시글 임베딩을 자동으로 다시 생성합니다.

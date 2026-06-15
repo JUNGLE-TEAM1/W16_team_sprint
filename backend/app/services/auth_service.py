@@ -10,6 +10,7 @@ from backend.app.core.errors import AppError
 from backend.app.core.security import (
     create_jwt,
     decode_jwt,
+    hash_password,
     hash_secret,
     random_token,
     utc_now,
@@ -17,10 +18,13 @@ from backend.app.core.security import (
 )
 from backend.app.models.user import User
 from backend.app.models.user_session import UserSession
-from backend.app.schemas.auth import LoginRequest, TokenResponse
+from backend.app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
 
 
 class UserRepositoryPort(Protocol):
+    def create(self, user: User) -> User:
+        pass
+
     def get(self, user_id: int) -> User | None:
         pass
 
@@ -75,8 +79,41 @@ class AuthService:
         self.sessions = sessions
         self.unit_of_work = unit_of_work
 
+    def signup(self, payload: SignupRequest) -> TokenResponse:
+        email = payload.email.strip().lower()
+        if self.users.get_by_email(email) is not None:
+            raise AppError(
+                code="EMAIL_ALREADY_REGISTERED",
+                message="이미 가입된 이메일입니다.",
+                status_code=status.HTTP_409_CONFLICT,
+                details={"email": email},
+            )
+
+        user = User(
+            email=email,
+            password_hash=hash_password(payload.password),
+            role="member",
+        )
+
+        try:
+            self.users.create(user)
+            session = self._create_session(user)
+            self.sessions.create(session)
+            tokens = self._issue_tokens(user=user, session=session)
+            self.sessions.rotate_refresh_token(
+                session,
+                refresh_token_hash=hash_secret(tokens.refresh_token),
+                csrf_token=tokens.csrf_token,
+                expires_at=utc_now() + timedelta(seconds=settings.refresh_token_seconds),
+            )
+            self.unit_of_work.commit()
+            return tokens
+        except Exception:
+            self.unit_of_work.rollback()
+            raise
+
     def login(self, payload: LoginRequest) -> TokenResponse:
-        user = self.users.get_by_email(payload.email)
+        user = self.users.get_by_email(payload.email.strip().lower())
         if user is None or not verify_password(payload.password, user.password_hash):
             raise AppError(
                 code="INVALID_CREDENTIALS",
@@ -84,13 +121,7 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
 
-        session = UserSession(
-            id=str(uuid4()),
-            user_id=user.id,
-            refresh_token_hash="pending",
-            csrf_token=random_token(),
-            expires_at=utc_now() + timedelta(seconds=settings.refresh_token_seconds),
-        )
+        session = self._create_session(user)
 
         try:
             self.sessions.create(session)
@@ -165,6 +196,15 @@ class AuthService:
         except Exception:
             self.unit_of_work.rollback()
             raise
+
+    def _create_session(self, user: User) -> UserSession:
+        return UserSession(
+            id=str(uuid4()),
+            user_id=user.id,
+            refresh_token_hash="pending",
+            csrf_token=random_token(),
+            expires_at=utc_now() + timedelta(seconds=settings.refresh_token_seconds),
+        )
 
     def _issue_tokens(self, *, user: User, session: UserSession) -> TokenResponse:
         refresh_jti = str(uuid4())

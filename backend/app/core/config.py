@@ -21,6 +21,14 @@ class Settings:
     )
     rate_limit_requests: int = int(os.getenv("RATE_LIMIT_REQUESTS", "120"))
     rate_limit_window_seconds: int = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+    embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
+    openai_base_url: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
+    openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    openai_embedding_dimensions: int = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "1536"))
+    openai_llm_model: str = os.getenv("OPENAI_LLM_MODEL", "gpt-4o-mini")
+    openai_llm_max_output_tokens: int = int(os.getenv("OPENAI_LLM_MAX_OUTPUT_TOKENS", "700"))
+    openai_timeout_seconds: float = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "20"))
 
 
 settings = Settings()

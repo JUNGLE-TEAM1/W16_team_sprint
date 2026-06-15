@@ -5,13 +5,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.v1.auth import router as auth_router
+from backend.app.api.v1.comments import router as comments_router
 from backend.app.api.v1.posts import router as posts_router
+from backend.app.api.v1.rag import router as rag_router
 from backend.app.api.v1.security import router as security_router
+from backend.app.api.v1.tags import router as tags_router
 from backend.app.core.config import settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.core.rate_limit import SimpleRateLimitMiddleware
 from backend.app.db.base import Base
-from backend.app.db.seeds import seed_demo_users
+from backend.app.db.seeds import seed_demo_users, seed_sprint_posts
 from backend.app.db.session import engine
 
 
@@ -20,6 +23,7 @@ def create_lifespan(database_engine=engine):
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         Base.metadata.create_all(bind=database_engine)
         seed_demo_users(database_engine)
+        seed_sprint_posts(database_engine)
         yield
 
     return lifespan
@@ -40,6 +44,9 @@ def create_app(database_engine=engine) -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(posts_router, prefix="/api/v1")
+    app.include_router(comments_router, prefix="/api/v1")
+    app.include_router(tags_router, prefix="/api/v1")
+    app.include_router(rag_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(security_router, prefix="/api/v1")
     return app
