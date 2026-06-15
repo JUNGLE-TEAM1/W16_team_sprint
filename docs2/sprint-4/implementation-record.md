@@ -770,6 +770,177 @@ Zustand/Redux:
   여러 페이지와 여러 컴포넌트가 같은 상태를 공유해야 할 때 쓰는 전역 상태 관리 도구다.
 ```
 
+### 10.2 서버 상태와 클라이언트 상태 구분하기
+
+상태 관리 라이브러리를 이해하려면 먼저 상태를 두 종류로 나눠야 합니다.
+
+| 구분 | 의미 | 현재 프로젝트 예시 | 지금 관리 방식 | 나중에 어울리는 도구 |
+| --- | --- | --- | --- | --- |
+| 클라이언트 상태 | 브라우저 화면 안에서만 의미 있는 값 | 모달 열림 여부, 작성 폼 입력값, 수정 모드, 선택된 정렬 옵션, 검색창에 입력 중인 값 | `useState` | `useState`, Zustand, Redux |
+| 서버 상태 | 원본이 백엔드/DB에 있는 값 | 게시글 목록, 게시글 상세, 댓글 목록, 태그 목록, 현재 로그인 사용자, 나중에 만들 유사 게시글 추천 결과 | `fetch` + `useState` + 수동 갱신 | TanStack Query, SWR, RTK Query |
+
+중요한 차이는 **누가 원본을 가지고 있느냐**입니다.
+
+```text
+클라이언트 상태:
+  브라우저가 원본이다.
+  예: 작성 모달이 열려 있는지 여부는 서버가 알 필요가 없다.
+
+서버 상태:
+  서버와 DB가 원본이다.
+  예: 게시글 목록은 PostgreSQL에 저장된 posts table이 원본이다.
+```
+
+현재 프로젝트는 서버 상태 관리 라이브러리를 쓰지 않습니다.
+그래서 `useBoardController.ts`가 서버 상태도 직접 관리합니다.
+
+예를 들어 게시글 목록은 아래 흐름으로 관리합니다.
+
+```text
+1. 화면이 먼저 렌더링된다.
+2. useEffect 또는 사용자 행동으로 loadPosts()가 실행된다.
+3. loadPosts()가 FastAPI에 GET /api/v1/posts 요청을 보낸다.
+4. 응답이 오기 전에는 posts가 빈 배열이거나 이전 데이터다.
+5. 응답이 오면 setPosts(result.data.items)를 실행한다.
+6. React가 posts 변경을 보고 화면을 다시 렌더링한다.
+```
+
+즉, 지금 방식은 "서버 응답이 올 때까지 화면 렌더링을 멈추는 방식"이 아닙니다.
+
+```text
+먼저 현재 가진 상태로 화면을 그린다.
+서버 응답이 오면 상태를 바꾼다.
+상태가 바뀌면 React가 다시 그린다.
+```
+
+현재 방식의 코드는 개념적으로 아래와 같습니다.
+
+```typescript
+const [posts, setPosts] = useState<Post[]>([]);
+const [isLoading, setIsLoading] = useState(false);
+const [message, setMessage] = useState("");
+
+async function loadPosts() {
+  setIsLoading(true);
+
+  const result = await request<PostPage>("/api/v1/posts");
+  setPosts(result.data.items);
+
+  setIsLoading(false);
+}
+```
+
+이 방식의 장점:
+
+```text
+1. 별도 라이브러리가 필요 없다.
+2. 코드 흐름이 눈에 바로 보인다.
+3. 작은 프로젝트에서는 충분하다.
+4. 학습 초반에는 fetch, loading, error, setState 흐름을 직접 이해하기 좋다.
+```
+
+이 방식의 단점:
+
+```text
+1. loading/error 상태를 매번 직접 만들어야 한다.
+2. 같은 API를 여러 컴포넌트에서 부르면 중복 요청을 막기 어렵다.
+3. 게시글 작성/수정/삭제 후 어떤 데이터를 다시 불러와야 하는지 직접 정해야 한다.
+4. 캐시가 없어서 화면을 갔다가 돌아오면 같은 데이터를 다시 요청하기 쉽다.
+5. 데이터가 오래됐는지, 다시 가져와야 하는지 판단하는 기준을 직접 만들어야 한다.
+```
+
+예를 들어 지금은 게시글 작성 성공 후 최신 목록을 보려면 직접 `loadPosts()`를 다시 호출해야 합니다.
+
+```text
+게시글 작성 성공
+-> 서버 DB에는 새 글이 저장됨
+-> 프론트 posts 상태는 아직 이전 목록일 수 있음
+-> loadPosts()를 다시 호출해서 최신 목록으로 덮어씀
+```
+
+TanStack Query 같은 서버 상태 관리 라이브러리를 쓰면 이 책임이 바뀝니다.
+
+```text
+현재 방식:
+  우리가 fetch 시점, loading, error, refetch, 캐시를 직접 관리한다.
+
+TanStack Query 방식:
+  게시글 목록 같은 서버 데이터를 queryKey로 등록하고,
+  라이브러리가 loading, error, 캐시, 중복 요청 제거, 재요청을 관리한다.
+```
+
+개념적으로는 아래처럼 바뀝니다.
+
+```typescript
+const postsQuery = useQuery({
+  queryKey: ["posts", search],
+  queryFn: () => fetchPosts(search),
+});
+```
+
+게시글 작성/수정/삭제 후에는 직접 `loadPosts()`를 여기저기 호출하는 대신, 관련 query를 오래된 데이터로 표시합니다.
+
+```typescript
+const createPostMutation = useMutation({
+  mutationFn: createPost,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["posts"] });
+  },
+});
+```
+
+읽는 법:
+
+```text
+queryKey ["posts", search]:
+  현재 검색 조건의 게시글 목록 데이터를 가리키는 이름이다.
+
+invalidateQueries(["posts"]):
+  게시글 목록 데이터가 오래됐으니 다시 가져오라고 TanStack Query에 알려주는 것이다.
+
+useMutation:
+  POST, PATCH, DELETE처럼 서버 상태를 바꾸는 요청을 관리한다.
+```
+
+현재 프로젝트에서 TanStack Query를 도입하면 맡기기 좋은 데이터:
+
+```text
+1. 게시글 목록
+2. 게시글 상세
+3. 댓글 목록
+4. 태그 목록
+5. 현재 로그인 사용자 /api/v1/auth/session/me
+6. Sprint 6 이후 유사 게시글 추천 결과
+```
+
+계속 `useState`로 관리해도 되는 데이터:
+
+```text
+1. 작성 모달 열림 여부
+2. 로그인/회원가입 폼 입력값
+3. 게시글 작성 폼 입력값
+4. 수정 모드 여부
+5. 검색창에 타이핑 중인 값
+6. 정렬 select에서 현재 선택한 값
+```
+
+이번 프로젝트에서는 아직 TanStack Query를 쓰지 않았습니다.
+그래서 현재 상태 관리 구조를 한 문장으로 정리하면 아래와 같습니다.
+
+```text
+클라이언트 상태와 서버 상태를 모두 useBoardController.ts에서 useState/useEffect/fetch로 직접 관리하고 있다.
+```
+
+나중에 서버 상태 관리 라이브러리를 도입한다면 목표는 아래처럼 바뀝니다.
+
+```text
+서버 데이터:
+  TanStack Query가 queryKey 기준으로 관리한다.
+
+UI 상태:
+  useState 또는 Zustand 같은 클라이언트 상태 관리 도구가 관리한다.
+```
+
 지금은 아래 정도로 이해하면 충분합니다.
 
 ```text
