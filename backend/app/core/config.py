@@ -1,5 +1,11 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+load_dotenv(ROOT_DIR / ".env")
 
 
 def _int_env(name: str, default: int) -> int:
@@ -29,6 +35,8 @@ class Settings:
     session_expire_hours: int = _int_env("SESSION_EXPIRE_HOURS", 4)
     session_cookie_name: str = os.getenv("SESSION_COOKIE_NAME", "session_id")
     session_cookie_secure: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+    openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     cors_origins: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:

@@ -41,7 +41,19 @@ def test_post_embeddings_table_uses_pgvector_and_post_fk() -> None:
             )
         )
 
-    assert {"id", "post_id", "embedding", "content_snapshot", "metadata", "created_at", "updated_at"} <= columns
+    assert {
+        "id",
+        "post_id",
+        "embedding",
+        "content_snapshot",
+        "content_hash",
+        "status",
+        "error_message",
+        "attempt_count",
+        "metadata",
+        "created_at",
+        "updated_at",
+    } <= columns
     assert embedding_type == f"vector({EMBEDDING_DIMENSIONS})"
 
     foreign_keys = inspector.get_foreign_keys("post_embeddings")
