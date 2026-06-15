@@ -15,6 +15,12 @@ class PostSearchType(str, Enum):
     author = "author"
 
 
+class PostSortType(str, Enum):
+    latest = "latest"
+    comment_count = "comment_count"
+    like_count = "like_count"
+
+
 def normalize_tag_names(tags: list[str]) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
@@ -64,6 +70,8 @@ class PostRead(BaseModel):
     content: str
     author_id: int
     author_display_name: str
+    comment_count: int
+    like_count: int
     tags: list[str]
     created_at: datetime
     updated_at: datetime

@@ -15,6 +15,7 @@ from backend.app.api.v1.tags import router as tags_router
 from backend.app.core.config import settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.db.base import Base
+from backend.app.db.schema import ensure_development_schema
 from backend.app.db.session import engine
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -23,6 +24,7 @@ FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     Base.metadata.create_all(bind=engine)
+    ensure_development_schema(engine)
     yield
 
 

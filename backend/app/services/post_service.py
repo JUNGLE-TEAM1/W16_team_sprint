@@ -9,7 +9,7 @@ from backend.app.core.errors import AppError
 from backend.app.models.post import Post
 from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
-from backend.app.schemas.post import PostCreate, PostPage, PostSearchType, PostUpdate
+from backend.app.schemas.post import PostCreate, PostPage, PostSearchType, PostSortType, PostUpdate
 
 
 class PostService:
@@ -30,6 +30,7 @@ class PostService:
         q: str | None,
         search_type: PostSearchType,
         tag: str | None,
+        sort: PostSortType,
         page: int,
         size: int,
     ) -> PostPage:
@@ -39,6 +40,7 @@ class PostService:
             q=normalized_q or None,
             search_type=search_type,
             tag=normalized_tag or None,
+            sort=sort,
             page=page,
             size=size,
         )
@@ -75,6 +77,12 @@ class PostService:
         self.db.commit()
         self.db.refresh(post)
         return post
+
+    def like(self, post_id: int) -> Post:
+        post = self.get(post_id)
+        post.like_count += 1
+        self.db.commit()
+        return self.get(post_id)
 
     def delete(self, post_id: int, author_id: int) -> None:
         post = self.get(post_id)

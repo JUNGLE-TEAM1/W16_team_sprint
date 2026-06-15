@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
@@ -15,6 +15,7 @@ class Post(Base):
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    like_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -44,3 +45,13 @@ class Post(Base):
     @property
     def tags(self) -> list[str]:
         return [tag.name for tag in sorted(self.tag_entities, key=lambda tag: tag.name)]
+
+    @property
+    def comment_count(self) -> int:
+        if "_comment_count" in self.__dict__:
+            return self.__dict__["_comment_count"]
+        return len(self.comments)
+
+    @comment_count.setter
+    def comment_count(self, value: int) -> None:
+        self.__dict__["_comment_count"] = value

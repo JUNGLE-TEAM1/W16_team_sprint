@@ -6,6 +6,7 @@ from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.main import app
 from backend.app.models.comment import Comment
+from backend.app.models.post import Post
 
 
 def setup_function() -> None:
@@ -56,6 +57,8 @@ def test_create_list_and_get_post() -> None:
     assert created_post["title"] == "스프린트 1"
     assert created_post["author_id"] == 1
     assert created_post["author_display_name"] == "Team One"
+    assert created_post["comment_count"] == 0
+    assert created_post["like_count"] == 0
     assert created_post["tags"] == ["auth", "fastapi"]
     assert "updated_at" in created_post
 
@@ -68,12 +71,16 @@ def test_create_list_and_get_post() -> None:
     assert list_body["total_pages"] == 1
     assert list_body["items"][0]["id"] == 1
     assert list_body["items"][0]["author_display_name"] == "Team One"
+    assert list_body["items"][0]["comment_count"] == 0
+    assert list_body["items"][0]["like_count"] == 0
     assert list_body["items"][0]["tags"] == ["auth", "fastapi"]
 
     get_response = client.get("/api/v1/posts/1")
     assert get_response.status_code == 200
     assert get_response.json()["content"] == "API와 DB 흐름"
     assert get_response.json()["author_display_name"] == "Team One"
+    assert get_response.json()["comment_count"] == 0
+    assert get_response.json()["like_count"] == 0
     assert get_response.json()["tags"] == ["auth", "fastapi"]
 
     tags_response = client.get("/api/v1/tags")
@@ -210,3 +217,85 @@ def test_get_missing_post_returns_common_error_shape() -> None:
             "details": {"post_id": 999},
         }
     }
+
+
+def test_like_post_requires_session_and_increments_like_count() -> None:
+    client = TestClient(app)
+    register_and_login(client, username="owner", display_name="Owner")
+    create_response = client.post(
+        "/api/v1/posts",
+        json={"title": "좋아요 테스트", "content": "좋아요 버튼 확인"},
+    )
+    assert create_response.status_code == 201
+    post_id = create_response.json()["id"]
+    assert create_response.json()["like_count"] == 0
+
+    anonymous = TestClient(app)
+    anonymous_response = anonymous.post(f"/api/v1/posts/{post_id}/like")
+    assert anonymous_response.status_code == 401
+    assert anonymous_response.json()["error"]["code"] == "SESSION_REQUIRED"
+
+    first_like_response = client.post(f"/api/v1/posts/{post_id}/like")
+    assert first_like_response.status_code == 200
+    assert first_like_response.json()["like_count"] == 1
+
+    second_like_response = client.post(f"/api/v1/posts/{post_id}/like")
+    assert second_like_response.status_code == 200
+    assert second_like_response.json()["like_count"] == 2
+
+    get_response = client.get(f"/api/v1/posts/{post_id}")
+    assert get_response.status_code == 200
+    assert get_response.json()["like_count"] == 2
+
+
+def test_list_posts_supports_comment_and_like_sorting() -> None:
+    client = TestClient(app)
+    register_and_login(client, username="owner", display_name="Owner")
+
+    first_response = client.post(
+        "/api/v1/posts",
+        json={"title": "댓글 적은 글", "content": "댓글 하나"},
+    )
+    second_response = client.post(
+        "/api/v1/posts",
+        json={"title": "댓글 많은 글", "content": "댓글 둘"},
+    )
+    third_response = client.post(
+        "/api/v1/posts",
+        json={"title": "좋아요 많은 글", "content": "좋아요 정렬"},
+    )
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+    assert third_response.status_code == 201
+
+    first_id = first_response.json()["id"]
+    second_id = second_response.json()["id"]
+    third_id = third_response.json()["id"]
+
+    assert client.post(f"/api/v1/posts/{first_id}/comments", json={"content": "댓글 1"}).status_code == 201
+    assert client.post(f"/api/v1/posts/{second_id}/comments", json={"content": "댓글 1"}).status_code == 201
+    assert client.post(f"/api/v1/posts/{second_id}/comments", json={"content": "댓글 2"}).status_code == 201
+
+    with Session(engine) as db:
+        first_post = db.get(Post, first_id)
+        second_post = db.get(Post, second_id)
+        third_post = db.get(Post, third_id)
+        assert first_post is not None
+        assert second_post is not None
+        assert third_post is not None
+        first_post.like_count = 2
+        second_post.like_count = 1
+        third_post.like_count = 7
+        db.commit()
+
+    comment_sort_response = client.get("/api/v1/posts?sort=comment_count")
+    assert comment_sort_response.status_code == 200
+    comment_sorted_items = comment_sort_response.json()["items"]
+    assert [item["id"] for item in comment_sorted_items[:3]] == [second_id, first_id, third_id]
+    assert comment_sorted_items[0]["comment_count"] == 2
+
+    like_sort_response = client.get("/api/v1/posts?sort=like_count")
+    assert like_sort_response.status_code == 200
+    like_sorted_items = like_sort_response.json()["items"]
+    assert [item["id"] for item in like_sorted_items[:3]] == [third_id, first_id, second_id]
+    assert like_sorted_items[0]["like_count"] == 7
