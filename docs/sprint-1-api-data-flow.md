@@ -22,8 +22,10 @@ post
 - id: 기본키
 - title: 필수 텍스트
 - content: 필수 텍스트
-- author_name: 선택 가능한 작성자 표시 이름
+- author_id: users.id를 참조하는 작성자 FK
+- author_display_name: 응답에서 보여주는 작성자 표시 이름
 - created_at: 서버에서 생성하는 작성 시각
+- updated_at: 서버에서 갱신하는 수정 시각
 ```
 
 ## API 계약
@@ -40,8 +42,7 @@ Status: 201 Created
 ```json
 {
   "title": "스프린트 1",
-  "content": "API와 DB 흐름",
-  "author_name": "team1"
+  "content": "API와 DB 흐름"
 }
 ```
 
@@ -52,8 +53,10 @@ Status: 201 Created
   "id": 1,
   "title": "스프린트 1",
   "content": "API와 DB 흐름",
-  "author_name": "team1",
-  "created_at": "2026-06-13T00:00:00"
+  "author_id": 1,
+  "author_display_name": "Team One",
+  "created_at": "2026-06-13T00:00:00",
+  "updated_at": "2026-06-13T00:00:00"
 }
 ```
 
@@ -72,8 +75,10 @@ Status: 200 OK
     "id": 1,
     "title": "스프린트 1",
     "content": "API와 DB 흐름",
-    "author_name": "team1",
-    "created_at": "2026-06-13T00:00:00"
+    "author_id": 1,
+    "author_display_name": "Team One",
+    "created_at": "2026-06-13T00:00:00",
+    "updated_at": "2026-06-13T00:00:00"
   }
 ]
 ```
@@ -148,11 +153,12 @@ DB column이 바뀌면 어떤 파일을 수정해야 하는가?
 ```text
 클라이언트
 -> POST /api/v1/posts
--> PostCreate schema가 title/content/author_name 검증
+-> session cookie로 현재 사용자 확인
+-> PostCreate schema가 title/content 검증
 -> get_post_service()가 PostRepository와 PostService 조립
--> PostService.create()
+-> PostService.create(payload, author_id)
 -> PostRepository.create()
--> posts 테이블에 insert
+-> posts 테이블에 author_id FK와 함께 insert
 -> service layer에서 commit
 -> PostRead schema로 201 응답 반환
 ```
@@ -214,6 +220,7 @@ DB column이 바뀌면 어떤 파일을 수정해야 하는가?
 | transaction 경계 | service layer | 여러 repository 호출을 하나의 비즈니스 흐름으로 묶기 쉽다. |
 | DB 접근 | repository layer | SQLAlchemy 쿼리 세부 구현이 API/router로 새지 않게 한다. |
 | DB 종류 | PostgreSQL | 실제 팀 프로젝트 환경에 가까운 RDBMS 기준으로 요청/저장 흐름을 학습한다. |
+| 작성자 연결 | `posts.author_id -> users.id` FK | 이후 권한/인가를 붙일 때 문자열 작성자보다 일관된 사용자 기준을 쓸 수 있다. |
 | 에러 응답 | `{ "error": { "code", "message", "details" } }` | 프론트엔드가 실패 처리를 일관되게 할 수 있다. |
 | 조회 실패 | `404 Not Found` | 리소스가 존재하지 않는 상황을 HTTP 의미에 맞게 표현한다. |
 | validation 실패 | `422 Unprocessable Entity` | FastAPI/Pydantic 기본 흐름과 맞고 필드 단위 오류를 전달하기 쉽다. |
@@ -224,7 +231,6 @@ DB column이 바뀌면 어떤 파일을 수정해야 하는가?
 
 - 게시글 삭제는 hard delete로 할 것인가, soft delete로 할 것인가?
 - 목록 조회는 처음부터 pagination을 필수로 둘 것인가?
-- 작성자 정보는 `author_name` 문자열로 둘 것인가, `users` 테이블과 FK로 연결할 것인가?
 - API 응답 최상위에 항상 `data`를 둘 것인가, 지금처럼 리소스를 바로 반환할 것인가?
 - 에러 `message`는 사용자에게 바로 보여줄 문구인가, 개발자 디버깅용 문구인가?
 - validation error의 `details`를 FastAPI 기본 형식으로 둘 것인가, 팀 형식으로 가공할 것인가?
@@ -233,17 +239,17 @@ DB column이 바뀌면 어떤 파일을 수정해야 하는가?
 
 ## 실행 확인
 
-아래 테스트로 게시글 생성, 목록 조회, 단건 조회, 공통 에러 응답 흐름을 확인했습니다.
+아래 테스트로 게시글 생성, 목록 조회, 단건 조회, 세션 인증 필요 여부, 공통 에러 응답 흐름을 확인했습니다.
 
 ```bash
-docker compose up -d postgres
-.venv/bin/python -m pytest backend/tests/test_posts_flow.py
+docker compose up -d db
+.venv/bin/python -m pytest backend/tests
 ```
 
 확인 결과:
 
 ```text
-2 passed
+8 passed
 ```
 
 ## Sprint 1 완료 체크리스트
@@ -252,6 +258,8 @@ docker compose up -d postgres
 - [x] 생성, 목록 조회, 단건 조회 endpoint를 만들었다.
 - [x] request schema와 response schema를 분리했다.
 - [x] DB table, column, index를 코드로 확인할 수 있다.
+- [x] `posts.author_id`를 `users.id` FK로 연결했다.
+- [x] 응답에 작성자 표시 이름과 `updated_at`을 포함했다.
 - [x] service layer에서 transaction을 commit한다.
 - [x] repository layer가 SQLAlchemy 쿼리를 담당한다.
 - [x] 공통 error response 형식을 만들었다.

@@ -112,7 +112,7 @@ SQLite와 PostgreSQL 차이에서 지금 알아야 할 것:
 PostgreSQL 실행:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d db
 ```
 
 의존성 설치:
@@ -145,8 +145,11 @@ http://127.0.0.1:8000/docs
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/posts \
   -H "Content-Type: application/json" \
-  -d '{"title":"Sprint 1","content":"API and DB flow","author_name":"team1"}'
+  -b cookies.txt \
+  -d '{"title":"Sprint 1","content":"API and DB flow"}'
 ```
+
+게시글 생성은 세션 인증이 필요합니다. 위 요청을 보내기 전에 회원가입과 세션 로그인을 먼저 수행해 `cookies.txt`에 `session_id`를 저장해야 합니다.
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/posts
@@ -159,7 +162,9 @@ curl http://127.0.0.1:8000/api/v1/posts/999
 확인할 내용:
 
 - 생성 요청은 `201`을 반환하는가?
+- 로그인하지 않고 생성 요청을 보내면 `401`을 반환하는가?
 - 목록 조회는 배열을 반환하는가?
+- 응답에 `author_id`, `author_display_name`, `updated_at`이 포함되는가?
 - 없는 글 조회는 공통 error response를 반환하는가?
 - 테스트는 PostgreSQL에 연결해서 통과하는가?
 

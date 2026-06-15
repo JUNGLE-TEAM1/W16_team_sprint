@@ -82,8 +82,7 @@ W16_team_sprint/
 ```json
 {
   "title": "스프린트 1",
-  "content": "API와 DB 흐름",
-  "author_name": "team1"
+  "content": "API와 DB 흐름"
 }
 ```
 
@@ -94,8 +93,10 @@ W16_team_sprint/
   "id": 1,
   "title": "스프린트 1",
   "content": "API와 DB 흐름",
-  "author_name": "team1",
-  "created_at": "2026-06-13T00:00:00"
+  "author_id": 1,
+  "author_display_name": "Team One",
+  "created_at": "2026-06-13T00:00:00",
+  "updated_at": "2026-06-13T00:00:00"
 }
 ```
 
