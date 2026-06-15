@@ -4,10 +4,12 @@ import logging
 from math import ceil
 
 from fastapi import status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
+from backend.app.models.post_like import PostLike
 from backend.app.repositories.embedding_repository import PostEmbeddingRepository
 from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
@@ -96,10 +98,17 @@ class PostService:
         self.db.refresh(post)
         return post
 
-    def like(self, post_id: int) -> Post:
+    def like(self, post_id: int, user_id: int) -> Post:
         post = self.get(post_id)
+        if self.db.get(PostLike, {"post_id": post_id, "user_id": user_id}) is not None:
+            return post
+
+        self.db.add(PostLike(post_id=post_id, user_id=user_id))
         post.like_count += 1
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
         return self.get(post_id)
 
     def delete(self, post_id: int, author_id: int) -> None:

@@ -7,6 +7,7 @@ from backend.app.db.session import engine
 from backend.app.main import app
 from backend.app.models.comment import Comment
 from backend.app.models.post import Post
+from backend.app.models.post_like import PostLike
 
 
 def setup_function() -> None:
@@ -133,6 +134,8 @@ def test_update_and_delete_post_requires_author() -> None:
         json={"content": "삭제될 댓글"},
     )
     assert comment_response.status_code == 201
+    like_response = owner.post(f"/api/v1/posts/{post_id}/like")
+    assert like_response.status_code == 200
 
     forbidden_delete = other.delete(f"/api/v1/posts/{post_id}")
     assert forbidden_delete.status_code == 403
@@ -146,6 +149,7 @@ def test_update_and_delete_post_requires_author() -> None:
 
     with Session(engine) as db:
         assert db.query(Comment).count() == 0
+        assert db.query(PostLike).count() == 0
 
 
 def test_list_posts_supports_search_tag_filter_and_pagination() -> None:
@@ -219,7 +223,7 @@ def test_get_missing_post_returns_common_error_shape() -> None:
     }
 
 
-def test_like_post_requires_session_and_increments_like_count() -> None:
+def test_like_post_requires_session_and_ignores_duplicate_like() -> None:
     client = TestClient(app)
     register_and_login(client, username="owner", display_name="Owner")
     create_response = client.post(
@@ -241,11 +245,20 @@ def test_like_post_requires_session_and_increments_like_count() -> None:
 
     second_like_response = client.post(f"/api/v1/posts/{post_id}/like")
     assert second_like_response.status_code == 200
-    assert second_like_response.json()["like_count"] == 2
+    assert second_like_response.json()["like_count"] == 1
+
+    other = TestClient(app)
+    register_and_login(other, username="other", display_name="Other")
+    other_like_response = other.post(f"/api/v1/posts/{post_id}/like")
+    assert other_like_response.status_code == 200
+    assert other_like_response.json()["like_count"] == 2
 
     get_response = client.get(f"/api/v1/posts/{post_id}")
     assert get_response.status_code == 200
     assert get_response.json()["like_count"] == 2
+
+    with Session(engine) as db:
+        assert db.query(PostLike).count() == 2
 
 
 def test_list_posts_supports_comment_and_like_sorting() -> None:

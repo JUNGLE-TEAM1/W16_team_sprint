@@ -17,3 +17,4 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
     comments: Mapped[list["Comment"]] = relationship(back_populates="author")
+    post_likes: Mapped[list["PostLike"]] = relationship(back_populates="user")

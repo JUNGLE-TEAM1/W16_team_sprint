@@ -52,10 +52,10 @@ def update_post(
 @router.post("/{post_id}/like", response_model=PostRead)
 def like_post(
     post_id: int,
-    _current_user: User = Depends(get_session_user),
+    current_user: User = Depends(get_session_user),
     service: PostService = Depends(get_post_service),
 ) -> PostRead:
-    return service.like(post_id=post_id)
+    return service.like(post_id=post_id, user_id=current_user.id)
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)

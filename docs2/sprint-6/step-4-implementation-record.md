@@ -51,6 +51,13 @@ frontend/src/hooks/useBoardController.ts
 frontend/src/styles.css
 frontend/src/types.ts
 frontend/src/utils/postFormatting.ts
+backend/app/api/v1/posts.py
+backend/app/models/__init__.py
+backend/app/models/post.py
+backend/app/models/post_like.py
+backend/app/models/user.py
+backend/app/services/post_service.py
+backend/tests/test_posts_flow.py
 docs2/sprint-6/step-4-implementation-record.md
 ```
 
@@ -280,10 +287,145 @@ Vite dev server HTML 응답 확인
 
 브라우저 픽셀 검증은 현재 Node REPL 환경에 Playwright가 없어 수행하지 못했습니다.
 
+```bash
+.venv/bin/python -m pytest backend/tests/test_posts_flow.py backend/tests/test_embedding_flow.py
+```
+
+결과:
+
+```text
+9 passed
+```
+
+처음 sandbox 안에서 실행했을 때는 `127.0.0.1:5433` PostgreSQL 연결이 `Operation not permitted`로 막혔습니다. 같은 테스트를 sandbox 밖에서 다시 실행했고 통과했습니다.
+
+```bash
+.venv/bin/python -m pytest backend/tests
+```
+
+결과:
+
+```text
+23 passed
+```
+
 ## 10. 남은 일
 
 ```text
 1. 실제 브라우저에서 로그인 후 작성 모달을 열고 3초 뒤 추천 패널이 뜨는지 확인한다.
 2. 게시글 수정 화면에서 현재 글이 추천 결과에 포함되지 않는지 확인한다.
 3. 이후 Step에서 summary=null 대신 LLM 요약을 붙일지 결정한다.
+```
+
+## 11. 추가 구현: 좋아요 중복 방지
+
+### 11.1 목표
+
+동일한 유저가 동일한 게시글에 좋아요를 여러 번 눌러도 `like_count`가 중복 증가하지 않게 만들었습니다.
+
+이번 구현은 과하게 확장하지 않고 아래만 처리했습니다.
+
+```text
+1. post_likes 테이블로 "누가 어떤 게시글에 좋아요를 눌렀는지" 기록한다.
+2. (post_id, user_id)를 composite primary key로 둔다.
+3. 이미 누른 유저가 다시 누르면 에러를 내지 않고 현재 게시글을 그대로 반환한다.
+4. unlike, liked_by_me 응답 필드, 별도 LikeRepository는 만들지 않는다.
+```
+
+### 11.2 데이터 모델
+
+```mermaid
+erDiagram
+    USERS {
+        int id PK
+        string username
+    }
+
+    POSTS {
+        int id PK
+        int author_id FK
+        int like_count
+    }
+
+    POST_LIKES {
+        int post_id PK,FK
+        int user_id PK,FK
+        datetime created_at
+    }
+
+    USERS ||--o{ POST_LIKES : "likes"
+    POSTS ||--o{ POST_LIKES : "liked by"
+```
+
+핵심은 `post_likes`의 primary key입니다.
+
+```text
+PRIMARY KEY (post_id, user_id)
+```
+
+이 제약 때문에 같은 유저가 같은 게시글에 대한 좋아요 row를 두 번 만들 수 없습니다.
+
+### 11.3 좋아요 요청 흐름
+
+```mermaid
+sequenceDiagram
+    participant Client as Client
+    participant API as posts.py
+    participant Auth as auth.py
+    participant PostService as PostService
+    participant DB as PostgreSQL
+
+    Client->>API: 1. POST /api/v1/posts/{post_id}/like 요청
+    API->>Auth: 2. 세션 사용자 확인
+    API->>PostService: 3. like(post_id, user_id) 호출
+    PostService->>DB: 4. post_likes에서 (post_id, user_id) 조회
+    PostService->>DB: 5. 없으면 post_likes INSERT 후 like_count 증가
+    PostService-->>API: 6. 중복이면 증가 없이 현재 Post 반환
+```
+
+다이어그램 번호와 같은 순서로 코드를 보면 됩니다.
+
+```text
+1. POST /api/v1/posts/{post_id}/like 요청
+   - 코드: backend/app/api/v1/posts.py
+   - 함수: like_post()
+   - 확인: 기존 endpoint를 유지한다. 프론트 API 경로는 바꾸지 않는다.
+
+2. 세션 사용자 확인
+   - 코드: backend/app/api/v1/posts.py
+   - 함수: like_post()
+   - 확인: get_session_user()로 로그인 유저를 받고, current_user.id를 service에 넘긴다.
+
+3. like(post_id, user_id) 호출
+   - 코드: backend/app/services/post_service.py
+   - 함수: PostService.like()
+   - 확인: 이제 post_id만 받지 않고 user_id도 함께 받는다.
+
+4. post_likes에서 (post_id, user_id) 조회
+   - 코드: backend/app/services/post_service.py
+   - 함수: PostService.like()
+   - 확인: self.db.get(PostLike, {"post_id": post_id, "user_id": user_id})로 이미 누른 기록을 확인한다.
+
+5. 없으면 post_likes INSERT 후 like_count 증가
+   - 코드: backend/app/models/post_like.py
+   - 모델: PostLike
+   - 코드: backend/app/services/post_service.py
+   - 함수: PostService.like()
+   - 확인: 처음 누른 조합이면 PostLike row를 추가하고 posts.like_count를 1 증가시킨다.
+
+6. 중복이면 증가 없이 현재 Post 반환
+   - 코드: backend/app/services/post_service.py
+   - 함수: PostService.like()
+   - 확인: 이미 PostLike row가 있으면 like_count를 변경하지 않고 현재 게시글을 반환한다.
+```
+
+### 11.4 테스트에서 확인한 것
+
+```text
+1. 로그인하지 않은 사용자는 좋아요를 누를 수 없다.
+2. 같은 유저의 첫 좋아요는 like_count를 1 증가시킨다.
+3. 같은 유저의 두 번째 좋아요는 like_count를 증가시키지 않는다.
+4. 다른 유저의 좋아요는 정상적으로 like_count를 증가시킨다.
+5. 게시글 삭제 시 연결된 post_likes row도 삭제된다.
+6. 좋아요를 눌러도 게시글 embedding은 재생성되지 않는다.
 ```

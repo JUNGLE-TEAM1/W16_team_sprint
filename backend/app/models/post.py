@@ -28,6 +28,10 @@ class Post(Base):
         back_populates="post",
         cascade="all, delete-orphan",
     )
+    likes: Mapped[list["PostLike"]] = relationship(
+        back_populates="post",
+        cascade="all, delete-orphan",
+    )
     tag_entities: Mapped[list["Tag"]] = relationship(
         secondary=post_tags,
         back_populates="posts",
