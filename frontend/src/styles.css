@@ -755,7 +755,7 @@ h3 {
 }
 
 .detail-page {
-  width: min(100%, 980px);
+  width: min(100%, 1180px);
   margin: 34px auto 0;
 }
 
@@ -772,11 +772,100 @@ h3 {
   min-height: 40px;
 }
 
-.edit-form,
+.edit-layout,
 .comments-area {
   margin-top: 22px;
   padding-top: 22px;
   border-top: 1px solid var(--line);
+}
+
+.compose-layout,
+.edit-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.compose-layout.has-related,
+.edit-layout.has-related {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  align-items: start;
+}
+
+.related-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(64, 120, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(64, 120, 255, 0.08);
+  padding: 16px;
+}
+
+.related-panel-head {
+  display: grid;
+  gap: 2px;
+}
+
+.related-panel-head .eyebrow {
+  margin-bottom: 0;
+}
+
+.related-panel h3 {
+  font-size: 19px;
+}
+
+.related-loading {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.related-list {
+  display: grid;
+  gap: 10px;
+}
+
+.related-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 14px;
+}
+
+.related-card-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.related-card-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.related-card-title span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(111, 194, 118, 0.34);
+  border-radius: 999px;
+  background: rgba(111, 194, 118, 0.12);
+  color: #bff0c4;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.related-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .comments-head {
@@ -842,7 +931,7 @@ h3 {
 }
 
 .modal-panel {
-  width: min(100%, 620px);
+  width: min(100%, 980px);
   max-height: min(90vh, 760px);
   overflow: auto;
   border: 1px solid var(--line-strong);
@@ -931,6 +1020,11 @@ h3 {
 
   .compact-lock,
   .comment-item {
+    grid-template-columns: 1fr;
+  }
+
+  .compose-layout.has-related,
+  .edit-layout.has-related {
     grid-template-columns: 1fr;
   }
 }

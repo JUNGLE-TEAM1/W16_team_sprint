@@ -36,6 +36,15 @@ export function buildPostBody(form: PostFormState) {
   });
 }
 
+export function buildRelatedPostsPayload(form: PostFormState, excludePostId?: number | null) {
+  return {
+    title: form.title.trim(),
+    content: form.content.trim(),
+    tags: parseTags(form.tags),
+    exclude_post_id: excludePostId ?? null,
+  };
+}
+
 export function buildPostQuery(nextSearch: SearchState) {
   const params = new URLSearchParams({
     search_type: nextSearch.search_type,

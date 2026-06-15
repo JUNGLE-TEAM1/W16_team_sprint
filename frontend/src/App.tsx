@@ -41,6 +41,7 @@ export default function App() {
               isAuthor={board.isAuthor}
               isEditingPost={board.isEditingPost}
               editForm={board.editForm}
+              editRelatedPosts={board.editRelatedPosts}
               commentForm={board.commentForm}
               onBackToList={board.goToList}
               onRefreshComments={() => board.loadComments()}
@@ -83,6 +84,7 @@ export default function App() {
             <ComposeModal
               isOpen={board.isComposeOpen}
               postForm={board.postForm}
+              relatedPosts={board.composeRelatedPosts}
               onChange={board.updatePostForm}
               onSubmit={board.createPost}
               onClose={board.closeCompose}

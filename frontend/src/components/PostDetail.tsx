@@ -5,41 +5,49 @@ import type {
   FormSubmitHandler,
   Post,
   PostFormState,
+  RelatedPostsState,
   User,
 } from "../types";
 import { formatDate } from "../utils/postFormatting";
+import { RelatedPostsPanel, shouldShowRelatedPostsPanel } from "./RelatedPostsPanel";
 
 interface PostEditFormProps {
   editForm: PostFormState;
+  relatedPosts: RelatedPostsState;
   onChange: FieldChangeHandler;
   onSubmit: FormSubmitHandler;
   onCancel: () => void;
 }
 
-function PostEditForm({ editForm, onChange, onSubmit, onCancel }: PostEditFormProps) {
+function PostEditForm({ editForm, relatedPosts, onChange, onSubmit, onCancel }: PostEditFormProps) {
+  const hasRelatedPanel = shouldShowRelatedPostsPanel(relatedPosts);
+
   return (
-    <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="게시글 수정">
-      <label className="field">
-        <span>Edit title</span>
-        <input name="title" value={editForm.title} onChange={onChange} />
-      </label>
-      <label className="field">
-        <span>Edit content</span>
-        <textarea name="content" value={editForm.content} onChange={onChange} />
-      </label>
-      <label className="field">
-        <span>Edit tags</span>
-        <input name="tags" value={editForm.tags} onChange={onChange} />
-      </label>
-      <div className="split-actions">
-        <button className="submit-button" type="submit">
-          수정 완료
-        </button>
-        <button className="ghost-button" type="button" onClick={onCancel}>
-          취소
-        </button>
-      </div>
-    </form>
+    <div className={hasRelatedPanel ? "edit-layout has-related" : "edit-layout"}>
+      <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="게시글 수정">
+        <label className="field">
+          <span>Edit title</span>
+          <input name="title" value={editForm.title} onChange={onChange} />
+        </label>
+        <label className="field">
+          <span>Edit content</span>
+          <textarea name="content" value={editForm.content} onChange={onChange} />
+        </label>
+        <label className="field">
+          <span>Edit tags</span>
+          <input name="tags" value={editForm.tags} onChange={onChange} />
+        </label>
+        <div className="split-actions">
+          <button className="submit-button" type="submit">
+            수정 완료
+          </button>
+          <button className="ghost-button" type="button" onClick={onCancel}>
+            취소
+          </button>
+        </div>
+      </form>
+      <RelatedPostsPanel state={relatedPosts} />
+    </div>
   );
 }
 
@@ -122,6 +130,7 @@ export function PostDetail({
   isAuthor,
   isEditingPost,
   editForm,
+  editRelatedPosts,
   commentForm,
   onBackToList,
   onRefreshComments,
@@ -142,6 +151,7 @@ export function PostDetail({
   isAuthor: boolean | null;
   isEditingPost: boolean;
   editForm: PostFormState;
+  editRelatedPosts: RelatedPostsState;
   commentForm: CommentFormState;
   onBackToList: () => void;
   onRefreshComments: () => void;
@@ -209,6 +219,7 @@ export function PostDetail({
         {isAuthor && isEditingPost ? (
           <PostEditForm
             editForm={editForm}
+            relatedPosts={editRelatedPosts}
             onChange={onEditChange}
             onSubmit={onUpdatePost}
             onCancel={onCancelEdit}

@@ -84,6 +84,25 @@ export interface PostPage {
   total_pages: number;
 }
 
+export interface RelatedPost {
+  post_id: number;
+  title: string;
+  content_preview: string;
+  tags: string[];
+  similarity: number;
+  summary: null;
+}
+
+export interface RelatedPostsResponse {
+  items: RelatedPost[];
+}
+
+export interface RelatedPostsState {
+  items: RelatedPost[];
+  isLoading: boolean;
+  errorText: string;
+}
+
 export interface LoginResponse {
   user: User;
 }
