@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from backend.app.models.post_embedding import (
@@ -11,6 +12,15 @@ from backend.app.models.post_embedding import (
     EMBEDDING_STATUS_FAILED,
     PostEmbedding,
 )
+
+
+@dataclass(frozen=True)
+class RelatedPostRow:
+    post_id: int
+    title: str
+    content_preview: str
+    tags: list[str]
+    similarity: float
 
 
 class PostEmbeddingRepository:
@@ -76,3 +86,78 @@ class PostEmbeddingRepository:
         self.db.add(row)
         self.db.flush()
         return row
+
+    def find_related_posts(
+        self,
+        query_embedding: list[float],
+        limit: int,
+        min_similarity: float,
+        exclude_post_id: int | None = None,
+    ) -> list[RelatedPostRow]:
+        statement = text(
+            """
+            WITH candidates AS (
+                SELECT
+                    posts.id AS post_id,
+                    posts.title AS title,
+                    posts.content AS content,
+                    1 - (
+                        post_embeddings.embedding <=> CAST(:query_embedding AS vector)
+                    ) AS similarity
+                FROM post_embeddings
+                JOIN posts ON posts.id = post_embeddings.post_id
+                WHERE post_embeddings.status = :completed_status
+                  AND post_embeddings.embedding IS NOT NULL
+                  AND (
+                    CAST(:exclude_post_id AS INTEGER) IS NULL
+                    OR posts.id <> CAST(:exclude_post_id AS INTEGER)
+                  )
+            )
+            SELECT
+                candidates.post_id,
+                candidates.title,
+                LEFT(candidates.content, :preview_length) AS content_preview,
+                candidates.similarity,
+                COALESCE(
+                    ARRAY_AGG(tags.name ORDER BY tags.name)
+                        FILTER (WHERE tags.name IS NOT NULL),
+                    ARRAY[]::varchar[]
+                ) AS tags
+            FROM candidates
+            LEFT JOIN post_tags ON post_tags.post_id = candidates.post_id
+            LEFT JOIN tags ON tags.id = post_tags.tag_id
+            WHERE candidates.similarity >= :min_similarity
+            GROUP BY
+                candidates.post_id,
+                candidates.title,
+                candidates.content,
+                candidates.similarity
+            ORDER BY candidates.similarity DESC, candidates.post_id DESC
+            LIMIT :limit
+            """
+        )
+        rows = self.db.execute(
+            statement,
+            {
+                "completed_status": EMBEDDING_STATUS_COMPLETED,
+                "exclude_post_id": exclude_post_id,
+                "limit": limit,
+                "min_similarity": min_similarity,
+                "preview_length": 240,
+                "query_embedding": self._to_vector_literal(query_embedding),
+            },
+        ).mappings()
+        return [
+            RelatedPostRow(
+                post_id=int(row["post_id"]),
+                title=str(row["title"]),
+                content_preview=str(row["content_preview"]),
+                tags=list(row["tags"] or []),
+                similarity=round(float(row["similarity"]), 6),
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _to_vector_literal(embedding: list[float]) -> str:
+        return "[" + ",".join(str(float(value)) for value in embedding) + "]"

@@ -9,6 +9,7 @@ from backend.app.repositories.tag_repository import TagRepository
 from backend.app.services.comment_service import CommentService
 from backend.app.services.embedding_service import EmbeddingProvider, OpenAIEmbeddingProvider, PostEmbeddingService
 from backend.app.services.post_service import PostService
+from backend.app.services.rag_service import RagService
 
 
 def get_embedding_provider() -> EmbeddingProvider:
@@ -36,3 +37,12 @@ def get_comment_service(db: Session = Depends(get_db)) -> CommentService:
     posts = PostRepository(db)
     comments = CommentRepository(db)
     return CommentService(db=db, posts=posts, comments=comments)
+
+
+def get_rag_service(
+    db: Session = Depends(get_db),
+    embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
+) -> RagService:
+    embeddings = PostEmbeddingRepository(db)
+    embedding_service = PostEmbeddingService(embedding_provider)
+    return RagService(embeddings=embeddings, embedding_service=embedding_service)

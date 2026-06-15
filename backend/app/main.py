@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app import models  # noqa: F401
+from backend.app.api.v1.ai import router as ai_router
 from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.comments import router as comments_router
 from backend.app.api.v1.posts import router as posts_router
@@ -37,6 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 register_error_handlers(app)
+app.include_router(ai_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(posts_router, prefix="/api/v1")
 app.include_router(comments_router, prefix="/api/v1")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from typing import Protocol
 
 from backend.app.core.config import settings
@@ -61,12 +62,15 @@ class PostEmbeddingService:
         self.dimensions = dimensions
 
     def build_post_text(self, post: Post) -> str:
-        tags = ", ".join(post.tags)
+        return self.build_text(title=post.title, content=post.content, tags=post.tags)
+
+    def build_text(self, title: str, content: str, tags: Sequence[str]) -> str:
+        tag_text = ", ".join(sorted(tag.strip().lower() for tag in tags if tag.strip()))
         return "\n".join(
             [
-                f"title: {post.title.strip()}",
-                f"content: {post.content.strip()}",
-                f"tags: {tags}",
+                f"title: {title.strip()}",
+                f"content: {content.strip()}",
+                f"tags: {tag_text}",
             ]
         )
 
