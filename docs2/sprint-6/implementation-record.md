@@ -1,4 +1,4 @@
-# Sprint 6 구현 기록
+# Sprint 6 Step 1 구현 기록
 
 ## 1. 오늘 구현 범위
 
@@ -123,40 +123,39 @@ ERD 읽는 법:
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant App as "FastAPI lifespan"
-    participant Base as "Base.metadata"
-    participant Event as "before_create event"
-    participant DB as "PostgreSQL"
+    participant App as FastAPI lifespan
+    participant Base as Base.metadata
+    participant Event as before_create event
+    participant DB as PostgreSQL
 
-    App->>Base: Base.metadata.create_all(bind=engine)
-    Base->>Event: before_create 실행
-    Event->>DB: CREATE EXTENSION IF NOT EXISTS vector
-    DB-->>Event: vector extension 준비 완료
-    Base->>DB: CREATE TABLE posts, post_embeddings, ...
-    DB-->>App: schema 준비 완료
+    App->>Base: 1. Base.metadata.create_all(bind=engine) 호출
+    Base->>Event: 2. before_create event 실행
+    Event->>DB: 3. CREATE EXTENSION IF NOT EXISTS vector 실행
+    Base->>DB: 4. CREATE TABLE posts, post_embeddings, ... 실행
 ```
 
-단계별 설명:
+다이어그램 번호와 같은 순서로 코드를 보면 됩니다.
 
 ```text
-1. FastAPI가 시작되면 main.py의 lifespan이 실행된다.
-2. lifespan은 Base.metadata.create_all(bind=engine)을 호출한다.
-3. Base.metadata에는 before_create event가 걸려 있다.
-4. 이 event가 CREATE EXTENSION IF NOT EXISTS vector를 먼저 실행한다.
-5. 그 다음 SQLAlchemy가 post_embeddings 테이블을 만든다.
-6. 이 순서가 중요한 이유는 vector extension이 먼저 있어야 vector(1536) 컬럼을 만들 수 있기 때문이다.
-```
+1. Base.metadata.create_all(bind=engine) 호출
+   - 코드: backend/app/main.py
+   - 함수: lifespan()
+   - 확인: FastAPI 시작 시 Base.metadata.create_all(bind=engine)을 호출한다.
 
-코드에서 볼 것:
+2. before_create event 실행
+   - 코드: backend/app/db/base.py
+   - 함수: create_pgvector_extension()
+   - 확인: Base.metadata에 before_create event listener가 붙어 있다.
 
-```text
-- backend/app/main.py
-  - lifespan()
-  - Base.metadata.create_all(bind=engine)
+3. CREATE EXTENSION IF NOT EXISTS vector 실행
+   - 코드: backend/app/db/base.py
+   - 함수: create_pgvector_extension()
+   - 확인: PostgreSQL이 vector 타입을 알 수 있도록 테이블 생성 전에 vector extension을 켠다.
 
-- backend/app/db/base.py
-  - create_pgvector_extension()
+4. CREATE TABLE posts, post_embeddings, ... 실행
+   - 코드: backend/app/models/post_embedding.py
+   - 클래스: PostEmbedding, Vector
+   - 확인: extension이 준비된 뒤 SQLAlchemy가 vector(1536) 컬럼이 있는 post_embeddings 테이블을 만든다.
 ```
 
 ## 7. post_embeddings 테이블 생성 흐름
@@ -171,27 +170,39 @@ flowchart TD
     F --> G["7. PostgreSQL에 post_embeddings 테이블 생성"]
 ```
 
-단계별 설명:
+다이어그램 번호와 같은 순서로 코드를 보면 됩니다.
 
 ```text
 1. main.py에서 backend.app.models를 import한다.
-2. models/__init__.py가 auth, user, post, comment, tag, post_embedding 모델을 한 번에 import한다.
-3. PostEmbedding class가 import되면 Base.metadata에 post_embeddings 테이블 정보가 등록된다.
-4. create_all()이 실행될 때 등록된 모든 테이블이 생성된다.
-5. 이 import가 없으면 post_embedding.py 파일이 있어도 metadata에 등록되지 않아 테이블이 안 생길 수 있다.
-```
+   - 코드: backend/app/main.py
+   - 확인: from backend.app import models 라인이 모델 등록의 시작점이다.
 
-코드에서 볼 것:
+2. models/__init__.py가 실행된다.
+   - 코드: backend/app/models/__init__.py
+   - 확인: auth, user, post, comment, tag, post_embedding 모델을 한 번에 import한다.
 
-```text
-- backend/app/main.py
-  - from backend.app import models
+3. post_embedding.py가 import된다.
+   - 코드: backend/app/models/__init__.py
+   - 확인: post_embedding이 __all__과 import 목록에 포함되어 있다.
 
-- backend/app/models/__init__.py
-  - post_embedding import 포함
+4. PostEmbedding class가 등록된다.
+   - 코드: backend/app/models/post_embedding.py
+   - 클래스: PostEmbedding
+   - 확인: class PostEmbedding(Base)가 import되는 순간 SQLAlchemy declarative model로 등록된다.
 
-- backend/app/models/post_embedding.py
-  - class PostEmbedding(Base)
+5. Base.metadata에 post_embeddings가 포함된다.
+   - 코드: backend/app/db/base.py, backend/app/models/post_embedding.py
+   - 확인: PostEmbedding이 Base를 상속하므로 Base.metadata가 post_embeddings 테이블 정의를 알게 된다.
+
+6. create_all()이 실행된다.
+   - 코드: backend/app/main.py
+   - 함수: lifespan()
+   - 확인: Base.metadata.create_all(bind=engine)이 metadata에 등록된 테이블 생성을 시도한다.
+
+7. PostgreSQL에 post_embeddings 테이블이 생성된다.
+   - 코드: backend/app/models/post_embedding.py
+   - 클래스: PostEmbedding
+   - 확인: post_id FK, embedding vector(1536), content_snapshot, metadata, timestamp 컬럼이 DB 테이블로 만들어진다.
 ```
 
 ## 8. 코드 읽는 순서
