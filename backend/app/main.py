@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.app import models  # noqa: F401
 from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.comments import router as comments_router
 from backend.app.api.v1.posts import router as posts_router
