@@ -23,6 +23,30 @@ def login(email: str = "member@sprint.local", password: str = "password123") -> 
     return response.json()
 
 
+def test_register_creates_user_without_tokens_and_rejects_duplicate_email() -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "new-member@sprint.local", "password": "password123"},
+    )
+
+    assert response.status_code == 201
+    created_user = response.json()
+    assert created_user["email"] == "new-member@sprint.local"
+    assert created_user["role"] == "member"
+    assert "access_token" not in created_user
+
+    duplicate_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "new-member@sprint.local", "password": "password123"},
+    )
+
+    assert duplicate_response.status_code == 409
+    assert duplicate_response.json()["error"]["code"] == "EMAIL_ALREADY_REGISTERED"
+
+    tokens = login(email="new-member@sprint.local", password="password123")
+    assert tokens["access_token"]
+
+
 def test_login_and_call_protected_me_endpoint() -> None:
     tokens = login()
 

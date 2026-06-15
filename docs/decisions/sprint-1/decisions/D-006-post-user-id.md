@@ -4,7 +4,7 @@ Date: 2026-06-13
 Sprint: 1
 Level: 3
 Status: Accepted
-Implementation: Planned
+Implementation: Completed
 Owner: User
 Chosen: A. `posts.user_id`를 추가한다.
 
@@ -228,3 +228,16 @@ D-006이 Pass되었으므로 ROADMAP의 후속 후보를 재분류한다. 다음
 
 관련 Q&A 기록:
 - `docs/decisions/sprint-1/troubleshooting/D-006-post-user-id-qna.md`
+
+## 14. 구현 결과
+
+Completed: 2026-06-14
+
+구현 내용:
+- `posts.user_id`를 추가했다.
+- 게시글 생성 시 현재 인증 사용자 id를 저장한다.
+- 게시글 수정/삭제 권한은 `post.user_id == current_user.id`로 확인한다.
+
+검증:
+- `DATABASE_URL=sqlite+pysqlite:////tmp/sprint1-implementation-test.db python3 -m pytest backend/tests` -> `14 passed`
+- `python3 -m pytest backend/tests` -> PostgreSQL `localhost:5433` 연결 거부로 setup 실패

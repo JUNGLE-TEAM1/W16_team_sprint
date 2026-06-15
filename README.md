@@ -85,6 +85,26 @@ uvicorn backend.app.main:app --reload --env-file .env
 ```
 
 기본 DB는 PostgreSQL입니다. `.env.example`의 `DATABASE_URL`은 `docker-compose.yml`로 실행되는 로컬 PostgreSQL 컨테이너를 가리킵니다.
+Sprint 4 RAG 기능은 pgvector extension이 필요하므로 DB image는 `pgvector/pgvector:pg16`을 사용합니다.
+
+### Sprint 4 RAG 준비
+
+게시글 작성/수정 후 `title`, `content`, `tags`를 embedding해서 `post_embeddings`에 저장합니다.
+기본 embedding model은 아래 값입니다.
+
+```text
+EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+EMBEDDING_DIMENSION=384
+```
+
+검색 결과 요약은 로컬 Ollama provider를 사용합니다.
+
+```bash
+ollama pull qwen2.5:3b
+ollama serve
+```
+
+기본 model은 `OLLAMA_MODEL=qwen2.5:3b`입니다. Ollama가 실행 중이지 않으면 추천 API는 유사 게시글 목록을 반환하고, 요약은 fallback 문장과 `summary_error`로 표시합니다.
 
 API 문서는 아래 주소에서 확인할 수 있습니다.
 

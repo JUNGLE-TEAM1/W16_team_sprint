@@ -21,6 +21,18 @@ class Settings:
     )
     rate_limit_requests: int = int(os.getenv("RATE_LIMIT_REQUESTS", "120"))
     rate_limit_window_seconds: int = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
+    embedding_model_name: str = os.getenv(
+        "EMBEDDING_MODEL_NAME",
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    )
+    embedding_dimension: int = int(os.getenv("EMBEDDING_DIMENSION", "384"))
+    rag_default_limit: int = int(os.getenv("RAG_DEFAULT_LIMIT", "3"))
+    rag_max_limit: int = int(os.getenv("RAG_MAX_LIMIT", "5"))
+    rag_high_similarity: float = float(os.getenv("RAG_HIGH_SIMILARITY", "0.8"))
+    rag_medium_similarity: float = float(os.getenv("RAG_MEDIUM_SIMILARITY", "0.6"))
+    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+    ollama_timeout_seconds: float = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "20"))
 
 
 settings = Settings()

@@ -8,6 +8,17 @@ class LoginRequest(BaseModel):
     password: str = Field(examples=["password123"])
 
 
+class RegisterRequest(BaseModel):
+    email: str = Field(examples=["new-member@sprint.local"])
+    password: str = Field(min_length=8, examples=["password123"])
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 

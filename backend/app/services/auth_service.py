@@ -10,6 +10,7 @@ from backend.app.core.errors import AppError
 from backend.app.core.security import (
     create_jwt,
     decode_jwt,
+    hash_password,
     hash_secret,
     random_token,
     utc_now,
@@ -17,10 +18,13 @@ from backend.app.core.security import (
 )
 from backend.app.models.user import User
 from backend.app.models.user_session import UserSession
-from backend.app.schemas.auth import LoginRequest, TokenResponse
+from backend.app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 
 
 class UserRepositoryPort(Protocol):
+    def create(self, user: User) -> User:
+        pass
+
     def get(self, user_id: int) -> User | None:
         pass
 
@@ -74,6 +78,33 @@ class AuthService:
         self.users = users
         self.sessions = sessions
         self.unit_of_work = unit_of_work
+
+    def register(self, payload: RegisterRequest) -> UserResponse:
+        existing_user = self.users.get_by_email(payload.email)
+        if existing_user is not None:
+            raise AppError(
+                code="EMAIL_ALREADY_REGISTERED",
+                message="이미 가입된 이메일입니다.",
+                status_code=status.HTTP_409_CONFLICT,
+                details={"email": payload.email},
+            )
+
+        user = User(
+            email=payload.email,
+            password_hash=hash_password(payload.password),
+        )
+
+        try:
+            saved_user = self.users.create(user)
+            self.unit_of_work.commit()
+            return UserResponse(
+                id=saved_user.id,
+                email=saved_user.email,
+                role=saved_user.role,
+            )
+        except Exception:
+            self.unit_of_work.rollback()
+            raise
 
     def login(self, payload: LoginRequest) -> TokenResponse:
         user = self.users.get_by_email(payload.email)

@@ -4,3 +4,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 backend-api-data-modeling-basic.md
+node_modules/
+dist/
+*.tsbuildinfo
