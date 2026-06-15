@@ -19,6 +19,12 @@ const SEARCH_TYPES = [
   { value: "author", label: "작성자" },
 ];
 
+const SORT_TYPES = [
+  { value: "latest", label: "최신순" },
+  { value: "comment_count", label: "댓글 많은 순" },
+  { value: "like_count", label: "좋아요 많은 순" },
+];
+
 function formatDate(value) {
   if (!value) {
     return "";
@@ -58,11 +64,13 @@ export default function App() {
   const [posts, setPosts] = useState([]);
   const [tags, setTags] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [search, setSearch] = useState({
     q: "",
     search_type: "title_content",
     tag: "",
+    sort: "latest",
     page: 1,
     size: 9,
   });
@@ -78,6 +86,7 @@ export default function App() {
     tags: "fastapi, sprint",
   });
   const [editForm, setEditForm] = useState({ title: "", content: "", tags: "" });
+  const [isEditingPost, setIsEditingPost] = useState(false);
   const [commentForm, setCommentForm] = useState({ content: "좋은 정리입니다." });
   const [status, setStatus] = useState({ text: "게시글을 불러오는 중", isError: false });
 
@@ -121,6 +130,50 @@ export default function App() {
     }));
   }
 
+  function openPostEditor() {
+    if (!selectedPost) {
+      return;
+    }
+    setEditForm({
+      title: selectedPost.title,
+      content: selectedPost.content,
+      tags: tagText(selectedPost.tags),
+    });
+    setIsEditingPost(true);
+  }
+
+  function closePostEditor() {
+    if (selectedPost) {
+      setEditForm({
+        title: selectedPost.title,
+        content: selectedPost.content,
+        tags: tagText(selectedPost.tags),
+      });
+    }
+    setIsEditingPost(false);
+  }
+
+  async function goToList() {
+    setSelectedPost(null);
+    setComments([]);
+    setIsEditingPost(false);
+    setIsComposeOpen(false);
+    await loadPosts({ quiet: true });
+  }
+
+  function openCompose() {
+    if (!currentUser) {
+      setAuthView("login");
+      setStatus({ text: "게시글 작성은 로그인이 필요합니다.", isError: true });
+      return;
+    }
+    setIsComposeOpen(true);
+  }
+
+  function closeCompose() {
+    setIsComposeOpen(false);
+  }
+
   function updateSearch(event) {
     setSearch((current) => ({
       ...current,
@@ -139,6 +192,7 @@ export default function App() {
   function postQuery(nextSearch) {
     const params = new URLSearchParams({
       search_type: nextSearch.search_type,
+      sort: nextSearch.sort,
       page: String(nextSearch.page),
       size: String(nextSearch.size),
     });
@@ -198,6 +252,8 @@ export default function App() {
     if (result.ok) {
       setCurrentUser(null);
       setAuthView(null);
+      setIsEditingPost(false);
+      setIsComposeOpen(false);
     }
   }
 
@@ -253,6 +309,16 @@ export default function App() {
         q: "",
         search_type: "title_content",
         tag: "",
+        sort: "latest",
+        page: 1,
+      },
+    });
+  }
+
+  async function changeSort(event) {
+    await loadPosts({
+      filters: {
+        sort: event.target.value,
         page: 1,
       },
     });
@@ -273,6 +339,8 @@ export default function App() {
         content: result.data.content,
         tags: tagText(result.data.tags),
       });
+      setIsEditingPost(false);
+      setIsComposeOpen(false);
       await loadComments(result.data.id, { quiet: true });
     }
   }
@@ -293,11 +361,13 @@ export default function App() {
     if (result.ok) {
       setPostForm({ title: "", content: "", tags: "" });
       setSelectedPost(result.data);
+      setIsComposeOpen(false);
       setEditForm({
         title: result.data.title,
         content: result.data.content,
         tags: tagText(result.data.tags),
       });
+      setIsEditingPost(false);
       await loadTags({ quiet: true });
       await loadPosts({ quiet: true, filters: { page: 1 } });
       await loadComments(result.data.id, { quiet: true });
@@ -323,6 +393,7 @@ export default function App() {
         content: result.data.content,
         tags: tagText(result.data.tags),
       });
+      setIsEditingPost(false);
       await loadTags({ quiet: true });
       await loadPosts({ quiet: true });
     }
@@ -345,6 +416,7 @@ export default function App() {
       setSelectedPost(null);
       setComments([]);
       setEditForm({ title: "", content: "", tags: "" });
+      setIsEditingPost(false);
       await loadTags({ quiet: true });
       await loadPosts({ quiet: true });
     }
@@ -360,6 +432,9 @@ export default function App() {
     });
     if (result.ok && Array.isArray(result.data)) {
       setComments(result.data);
+      setSelectedPost((current) =>
+        current?.id === postId ? { ...current, comment_count: result.data.length } : current,
+      );
     }
   }
 
@@ -383,6 +458,26 @@ export default function App() {
     if (result.ok) {
       setCommentForm({ content: "" });
       await loadComments(selectedPost.id, { quiet: true });
+    }
+  }
+
+  async function likePost() {
+    if (!selectedPost) {
+      return;
+    }
+    if (!currentUser) {
+      setAuthView("login");
+      setStatus({ text: "좋아요는 로그인이 필요합니다.", isError: true });
+      return;
+    }
+
+    const result = await request(`/api/v1/posts/${selectedPost.id}/like`, {
+      method: "POST",
+      successMessage: "좋아요를 반영했습니다.",
+    });
+    if (result.ok) {
+      setSelectedPost(result.data);
+      await loadPosts({ quiet: true });
     }
   }
 
@@ -425,7 +520,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand-button" type="button" onClick={() => loadPosts()}>
+        <button className="brand-button" type="button" onClick={goToList}>
           <span className="brand-symbol">AI</span>
           <span>지식 공유 게시판</span>
         </button>
@@ -512,227 +607,34 @@ export default function App() {
       ) : null}
 
       <main>
-        <section className="hero" aria-label="서비스 소개">
-          <p className="eyebrow">Knowledge Sprint Board</p>
-          <h1>AI 지식 공유 게시판</h1>
-          <p>
-            태그로 분류하고, 검색 타입을 선택하고, 페이지 단위로 학습 노트를 탐색합니다.
-          </p>
-          <form className="search-bar" onSubmit={submitSearch}>
-            <select name="search_type" value={search.search_type} onChange={updateSearch}>
-              {SEARCH_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <input
-              name="q"
-              value={search.q}
-              onChange={updateSearch}
-              placeholder="검색어를 입력하세요"
-            />
-            <button className="submit-button" type="submit">
-              검색
-            </button>
-          </form>
-          <div className="hero-actions">
-            <button className="pill-button" type="button" onClick={clearFilters}>
-              필터 초기화
-            </button>
-            <button
-              className="pill-button highlight"
-              type="button"
-              onClick={() => {
-                if (!currentUser) {
-                  setAuthView("login");
-                  setStatus({ text: "게시글 작성은 로그인이 필요합니다.", isError: true });
-                } else {
-                  document.getElementById("compose")?.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
-            >
-              게시글 작성
-            </button>
-          </div>
-        </section>
-
-        <div className={`status ${status.isError ? "is-error" : ""}`} role="status">
-          <span className="status-dot" aria-hidden="true" />
-          <span>{status.text}</span>
-        </div>
-
-        <section className="tag-filter" aria-label="태그 필터">
-          <div className="tag-filter-head">
-            <span>태그 필터</span>
-            {selectedTagName ? <strong>선택됨: #{selectedTagName}</strong> : null}
-          </div>
-          <div className="tag-row">
-            {tags.length > 0 ? (
-              tags.map((tag) => (
-                <button
-                  className={`tag-button ${search.tag === tag.name ? "is-active" : ""}`}
-                  key={tag.id}
-                  type="button"
-                  onClick={() => filterByTag(tag.name)}
-                >
-                  #{tag.name}
-                </button>
-              ))
-            ) : (
-              <span className="muted-text">아직 등록된 태그가 없습니다.</span>
-            )}
-          </div>
-        </section>
-
-        <section className="posts-section" aria-label="게시글 목록">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Latest Posts</p>
-              <h2>현재까지 작성된 게시글</h2>
+        {selectedPost ? (
+          <>
+            <div className={`status ${status.isError ? "is-error" : ""}`} role="status">
+              <span className="status-dot" aria-hidden="true" />
+              <span>{status.text}</span>
             </div>
-            <span className="count-chip">
-              {pageMeta.total}개 · {pageMeta.page}/{pageMeta.total_pages || 1} 페이지
-            </span>
-          </div>
 
-          {posts.length > 0 ? (
-            <div className="post-grid">
-              {posts.map((post, index) => (
-                <article
-                  className="post-card"
-                  key={post.id}
-                  tabIndex={0}
-                  onClick={() => selectPost(post)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      selectPost(post);
-                    }
-                  }}
-                >
-                  <div className={`card-visual ${CARD_THEMES[index % CARD_THEMES.length]}`}>
-                    <span>{String((pageMeta.page - 1) * pageMeta.size + index + 1).padStart(2, "0")}</span>
-                    <strong>{post.title.slice(0, 1).toUpperCase()}</strong>
+            <section className="detail-page" aria-label="게시글 상세">
+              <article className="panel detail-panel">
+                <div className="section-heading compact-heading">
+                  <div>
+                    <p className="eyebrow">Read</p>
+                    <h2>{selectedPost.title}</h2>
                   </div>
-                  <div className="card-body">
-                    <h3>{post.title}</h3>
-                    <p>{excerpt(post.content)}</p>
-                    <div className="card-tags">
-                      {post.tags.map((tag) => (
-                        <span key={tag}>#{tag}</span>
-                      ))}
-                    </div>
-                    <div className="card-meta">
-                      <span>{formatDate(post.created_at)}</span>
-                      <span>by {post.author_display_name}</span>
-                    </div>
+                  <div className="section-actions">
+                    <button className="ghost-button" type="button" onClick={goToList}>
+                      목록으로
+                    </button>
+                    <button className="ghost-button" type="button" onClick={() => loadComments()}>
+                      댓글 새로고침
+                    </button>
                   </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <strong>조건에 맞는 게시글이 없습니다.</strong>
-              <span>검색어 또는 태그 필터를 조정해보세요.</span>
-            </div>
-          )}
+                </div>
 
-          <div className="pagination">
-            <button
-              className="pill-button"
-              type="button"
-              disabled={pageMeta.page <= 1}
-              onClick={() => changePage(pageMeta.page - 1)}
-            >
-              이전
-            </button>
-            <span>
-              page {pageMeta.page} / {pageMeta.total_pages || 1}
-            </span>
-            <button
-              className="pill-button"
-              type="button"
-              disabled={pageMeta.total_pages === 0 || pageMeta.page >= pageMeta.total_pages}
-              onClick={() => changePage(pageMeta.page + 1)}
-            >
-              다음
-            </button>
-          </div>
-        </section>
-
-        <section className="workbench" aria-label="게시글 작성과 상세">
-          <article className="panel" id="compose">
-            <div className="section-heading compact-heading">
-              <div>
-                <p className="eyebrow">Write</p>
-                <h2>새 게시글 작성</h2>
-              </div>
-            </div>
-
-            {currentUser ? (
-              <form className="stack-form" onSubmit={createPost}>
-                <label className="field">
-                  <span>Title</span>
-                  <input
-                    name="title"
-                    value={postForm.title}
-                    onChange={updatePostForm}
-                    maxLength={120}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>Content</span>
-                  <textarea
-                    name="content"
-                    value={postForm.content}
-                    onChange={updatePostForm}
-                    maxLength={10000}
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>Tags</span>
-                  <input
-                    name="tags"
-                    value={postForm.tags}
-                    onChange={updatePostForm}
-                    placeholder="fastapi, auth, sprint"
-                  />
-                </label>
-                <button className="submit-button" type="submit">
-                  게시글 작성
-                </button>
-              </form>
-            ) : (
-              <div className="locked-panel">
-                <strong>로그인 후 게시글을 작성할 수 있습니다.</strong>
-                <button className="pill-button highlight" type="button" onClick={() => setAuthView("login")}>
-                  로그인하기
-                </button>
-              </div>
-            )}
-          </article>
-
-          <article className="panel detail-panel">
-            <div className="section-heading compact-heading">
-              <div>
-                <p className="eyebrow">Read</p>
-                <h2>{selectedPost ? selectedPost.title : "게시글 상세"}</h2>
-              </div>
-              {selectedPost ? (
-                <button className="ghost-button" type="button" onClick={() => loadComments()}>
-                  댓글 새로고침
-                </button>
-              ) : null}
-            </div>
-
-            {selectedPost ? (
-              <>
                 <div className="post-detail">
                   <p>{selectedPost.content}</p>
                   <div className="card-tags">
-                    {selectedPost.tags.map((tag) => (
+                    {(selectedPost.tags ?? []).map((tag) => (
                       <span key={tag}>#{tag}</span>
                     ))}
                   </div>
@@ -740,10 +642,29 @@ export default function App() {
                     <span>{formatDate(selectedPost.created_at)}</span>
                     <span>by {selectedPost.author_display_name}</span>
                   </div>
+                  <div className="card-stats detail-stats">
+                    <span>댓글 {selectedPost.comment_count ?? comments.length}개</span>
+                    <span>좋아요 {selectedPost.like_count ?? 0}개</span>
+                  </div>
+                  <div className="like-actions">
+                    <button className="like-button" type="button" onClick={likePost}>
+                      좋아요
+                    </button>
+                  </div>
+                  {isAuthor ? (
+                    <div className="detail-actions" aria-label="게시글 관리">
+                      <button className="ghost-button" type="button" onClick={openPostEditor}>
+                        수정
+                      </button>
+                      <button className="danger-button" type="button" onClick={deletePost}>
+                        삭제
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
-                {isAuthor ? (
-                  <form className="stack-form edit-form" onSubmit={updatePost}>
+                {isAuthor && isEditingPost ? (
+                  <form className="stack-form edit-form" onSubmit={updatePost} aria-label="게시글 수정">
                     <label className="field">
                       <span>Edit title</span>
                       <input name="title" value={editForm.title} onChange={updateEditForm} />
@@ -758,10 +679,10 @@ export default function App() {
                     </label>
                     <div className="split-actions">
                       <button className="submit-button" type="submit">
-                        수정
+                        수정 완료
                       </button>
-                      <button className="danger-button" type="button" onClick={deletePost}>
-                        삭제
+                      <button className="ghost-button" type="button" onClick={closePostEditor}>
+                        취소
                       </button>
                     </div>
                   </form>
@@ -822,15 +743,221 @@ export default function App() {
                     </div>
                   )}
                 </div>
-              </>
-            ) : (
-              <div className="empty-state inline-empty">
-                <strong>게시글 카드를 선택하세요.</strong>
-                <span>비로그인 상태에서도 게시글과 댓글을 읽을 수 있습니다.</span>
+              </article>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="hero" aria-label="서비스 소개">
+              <p className="eyebrow">Knowledge Sprint Board</p>
+              <h1>AI 지식 공유 게시판</h1>
+              <p>
+                태그로 분류하고, 검색 타입을 선택하고, 페이지 단위로 학습 노트를 탐색합니다.
+              </p>
+              <form className="search-bar" onSubmit={submitSearch}>
+                <select name="search_type" value={search.search_type} onChange={updateSearch}>
+                  {SEARCH_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name="q"
+                  value={search.q}
+                  onChange={updateSearch}
+                  placeholder="검색어를 입력하세요"
+                />
+                <button className="submit-button" type="submit">
+                  검색
+                </button>
+              </form>
+              <div className="hero-actions">
+                <button className="pill-button" type="button" onClick={clearFilters}>
+                  필터 초기화
+                </button>
               </div>
-            )}
-          </article>
-        </section>
+            </section>
+
+            <div className={`status ${status.isError ? "is-error" : ""}`} role="status">
+              <span className="status-dot" aria-hidden="true" />
+              <span>{status.text}</span>
+            </div>
+
+            <section className="tag-filter" aria-label="태그 필터">
+              <div className="tag-filter-head">
+                <span>태그 필터</span>
+                {selectedTagName ? <strong>선택됨: #{selectedTagName}</strong> : null}
+              </div>
+              <div className="tag-row">
+                {tags.length > 0 ? (
+                  tags.map((tag) => (
+                    <button
+                      className={`tag-button ${search.tag === tag.name ? "is-active" : ""}`}
+                      key={tag.id}
+                      type="button"
+                      onClick={() => filterByTag(tag.name)}
+                    >
+                      #{tag.name}
+                    </button>
+                  ))
+                ) : (
+                  <span className="muted-text">아직 등록된 태그가 없습니다.</span>
+                )}
+              </div>
+            </section>
+
+            <section className="posts-section" aria-label="게시글 목록">
+              <div className="section-heading list-heading">
+                <div>
+                  <p className="eyebrow">Latest Posts</p>
+                  <h2>현재까지 작성된 게시글</h2>
+                </div>
+                <div className="section-actions">
+                  <span className="count-chip">
+                    {pageMeta.total}개 · {pageMeta.page}/{pageMeta.total_pages || 1} 페이지
+                  </span>
+                  <label className="sort-control">
+                    <span>정렬</span>
+                    <select name="sort" value={search.sort} onChange={changeSort}>
+                      {SORT_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="submit-button compact-button" type="button" onClick={openCompose}>
+                    새 글 작성
+                  </button>
+                </div>
+              </div>
+
+              {posts.length > 0 ? (
+                <div className="post-grid">
+                  {posts.map((post, index) => (
+                    <article
+                      className="post-card"
+                      key={post.id}
+                      tabIndex={0}
+                      onClick={() => selectPost(post)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          selectPost(post);
+                        }
+                      }}
+                    >
+                      <div className={`card-visual ${CARD_THEMES[index % CARD_THEMES.length]}`}>
+                        <span>{String((pageMeta.page - 1) * pageMeta.size + index + 1).padStart(2, "0")}</span>
+                        <strong>{post.title.slice(0, 1).toUpperCase()}</strong>
+                      </div>
+                      <div className="card-body">
+                        <h3>{post.title}</h3>
+                        <p>{excerpt(post.content)}</p>
+                        <div className="card-tags">
+                          {(post.tags ?? []).map((tag) => (
+                            <span key={tag}>#{tag}</span>
+                          ))}
+                        </div>
+                        <div className="card-stats">
+                          <span>댓글 {post.comment_count ?? 0}개</span>
+                          <span>좋아요 {post.like_count ?? 0}개</span>
+                        </div>
+                        <div className="card-meta">
+                          <span>{formatDate(post.created_at)}</span>
+                          <span>by {post.author_display_name}</span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <strong>조건에 맞는 게시글이 없습니다.</strong>
+                  <span>검색어 또는 태그 필터를 조정해보세요.</span>
+                </div>
+              )}
+
+              <div className="pagination">
+                <button
+                  className="pill-button"
+                  type="button"
+                  disabled={pageMeta.page <= 1}
+                  onClick={() => changePage(pageMeta.page - 1)}
+                >
+                  이전
+                </button>
+                <span>
+                  page {pageMeta.page} / {pageMeta.total_pages || 1}
+                </span>
+                <button
+                  className="pill-button"
+                  type="button"
+                  disabled={pageMeta.total_pages === 0 || pageMeta.page >= pageMeta.total_pages}
+                  onClick={() => changePage(pageMeta.page + 1)}
+                >
+                  다음
+                </button>
+              </div>
+            </section>
+
+            {isComposeOpen ? (
+              <div className="modal-backdrop">
+                <section
+                  className="modal-panel"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="새 게시글 작성"
+                >
+                  <div className="section-heading compact-heading">
+                    <div>
+                      <p className="eyebrow">Write</p>
+                      <h2>새 게시글 작성</h2>
+                    </div>
+                    <button className="ghost-button" type="button" onClick={closeCompose}>
+                      닫기
+                    </button>
+                  </div>
+
+                  <form className="stack-form" onSubmit={createPost}>
+                    <label className="field">
+                      <span>Title</span>
+                      <input
+                        name="title"
+                        value={postForm.title}
+                        onChange={updatePostForm}
+                        maxLength={120}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Content</span>
+                      <textarea
+                        name="content"
+                        value={postForm.content}
+                        onChange={updatePostForm}
+                        maxLength={10000}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Tags</span>
+                      <input
+                        name="tags"
+                        value={postForm.tags}
+                        onChange={updatePostForm}
+                        placeholder="fastapi, auth, sprint"
+                      />
+                    </label>
+                    <button className="submit-button" type="submit">
+                      게시글 작성
+                    </button>
+                  </form>
+                </section>
+              </div>
+            ) : null}
+          </>
+        )}
       </main>
     </div>
   );
