@@ -8,7 +8,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.v1.auth import router as auth_router
+from backend.app.api.v1.comments import router as comments_router
 from backend.app.api.v1.posts import router as posts_router
+from backend.app.api.v1.tags import router as tags_router
 from backend.app.core.config import settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.db.base import Base
@@ -34,6 +36,8 @@ app.add_middleware(
 register_error_handlers(app)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(posts_router, prefix="/api/v1")
+app.include_router(comments_router, prefix="/api/v1")
+app.include_router(tags_router, prefix="/api/v1")
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
 
