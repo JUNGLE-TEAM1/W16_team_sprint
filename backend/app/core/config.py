@@ -67,6 +67,15 @@ class Settings:
     reference_api_url: str = os.getenv("REFERENCE_API_URL", "").strip()
     reference_max_items: int = int(os.getenv("REFERENCE_MAX_ITEMS", "3"))
     reference_timeout_seconds: float = float(os.getenv("REFERENCE_TIMEOUT_SECONDS", "2.5"))
+    suwon_youth_policy_api_key: str = os.getenv("SUWON_YOUTH_POLICY_API_KEY", "").strip()
+    suwon_youth_policy_api_base_url: str = os.getenv(
+        "SUWON_YOUTH_POLICY_API_BASE_URL",
+        "https://api.odcloud.kr/api",
+    ).strip()
+    suwon_youth_policy_api_per_page: int = int(os.getenv("SUWON_YOUTH_POLICY_API_PER_PAGE", "100"))
+    suwon_youth_policy_api_timeout_seconds: float = float(
+        os.getenv("SUWON_YOUTH_POLICY_API_TIMEOUT_SECONDS", "10")
+    )
 
 
 settings = Settings()

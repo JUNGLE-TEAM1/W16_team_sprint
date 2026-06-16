@@ -25,45 +25,24 @@ class OfficialReferenceCandidate:
 OFFICIAL_REFERENCE_CATALOG: tuple[OfficialReferenceCandidate, ...] = (
     OfficialReferenceCandidate(
         source="공공데이터포털",
-        title="한국고용정보원 온통청년 청년정책API",
-        url="https://www.data.go.kr/data/15143273/openapi.do",
-        excerpt="청년일자리, 청년주거, 청년금융, 청년복지, 청년교육문화 정책정보를 제공하는 공공데이터입니다.",
-        keywords=("청년", "청년정책", "취업", "일자리", "주거", "금융", "복지", "교육문화", "온통청년"),
+        title="경기도 수원시 청년지원사업 상세설명 API",
+        url="https://infuser.odcloud.kr/oas/docs?namespace=15089956/v1",
+        excerpt="수원시 청년지원사업의 사업명, 사업내용, 기간, 주소, 전화번호, 데이터기준일자를 제공하는 OpenAPI입니다.",
+        keywords=("수원", "수원시", "청년", "청년정책", "청년지원사업", "월세", "취업", "창업"),
     ),
     OfficialReferenceCandidate(
-        source="서울 열린데이터광장",
-        title="서울시 일자리카페 정보",
-        url="https://data.seoul.go.kr/dataList/OA-15356/S/1/datasetView.do",
-        excerpt="서울일자리포털에서 제공하는 일자리카페 공간소개, 취업프로그램, 이용시간, 주소, 연락처 데이터입니다.",
-        keywords=("일자리카페", "취업", "면접", "스터디", "청년", "서울", "일자리"),
+        source="수원청년포털",
+        title="수원 청년지원사업 안내",
+        url="http://www.swyouth.kr",
+        excerpt="수원시 청년 관련 정책, 지원사업, 공간과 프로그램을 확인할 수 있는 수원청년포털입니다.",
+        keywords=("수원", "수원시", "청년", "수원청년", "지원사업", "청년월세"),
     ),
     OfficialReferenceCandidate(
-        source="공공데이터포털",
-        title="전국사회복지시설표준데이터",
-        url="https://www.data.go.kr/data/15096296/standard.do",
-        excerpt="사회복지시설 목록정보, 기본정보, 행사정보, 구인정보, 시설종류코드 등을 제공하는 공공데이터입니다.",
-        keywords=("복지시설", "사회복지시설", "복지관", "상담", "센터", "시설", "장애", "노인"),
-    ),
-    OfficialReferenceCandidate(
-        source="공공데이터포털",
-        title="전국무더위쉼터표준데이터",
-        url="https://www.data.go.kr/data/15013199/standard.do",
-        excerpt="쉼터명칭, 상세주소, 이용가능인원, 냉방기 보유 현황 등 무더위쉼터 데이터를 제공합니다.",
-        keywords=("무더위", "쉼터", "폭염", "재난", "안전", "노인", "시설"),
-    ),
-    OfficialReferenceCandidate(
-        source="공공데이터포털",
-        title="소상공인시장진흥공단 상가(상권)정보 API",
-        url="https://www.data.go.kr/data/15012005/openapi.do",
-        excerpt="전국 상가업소의 상호명, 업종, 주소, 경도, 위도 등 생활 인프라 탐색에 쓸 수 있는 데이터입니다.",
-        keywords=("상권", "상가", "생활인프라", "업종", "주소", "시설", "전국"),
-    ),
-    OfficialReferenceCandidate(
-        source="복지로",
-        title="복지로 복지서비스 안내",
-        url="https://www.bokjiro.go.kr/",
-        excerpt="복지서비스 검색, 복지급여 신청, 긴급복지와 생활지원 제도를 확인할 수 있는 대표 포털입니다.",
-        keywords=("복지", "저소득", "긴급지원", "주거급여", "생계", "돌봄", "상담"),
+        source="수원시청",
+        title="수원시청 청년정책",
+        url="https://www.suwon.go.kr/",
+        excerpt="수원시청 공식 사이트에서 청년정책과 시정 공고를 확인할 수 있습니다.",
+        keywords=("수원", "수원시청", "청년정책", "공고", "정책"),
     ),
 )
 
@@ -83,7 +62,6 @@ def fetch_reference_payloads(
 
     limit = _bounded_int(max_items, minimum=1, maximum=5)
     timeout = _bounded_float(timeout_seconds, minimum=0.5, maximum=10.0)
-    references: list[ReferencePayload] = []
 
     custom_urls_requested = any(_clean(url) for url in reference_urls or [])
     if custom_urls_requested:
@@ -96,13 +74,11 @@ def fetch_reference_payloads(
             )
         )[:limit]
 
-    references.extend(
-        _fetch_external_api_references(
-            query_text=query_text,
-            api_url=api_url,
-            limit=limit,
-            timeout_seconds=timeout,
-        )
+    references = _fetch_external_api_references(
+        query_text=query_text,
+        api_url=api_url,
+        limit=limit,
+        timeout_seconds=timeout,
     )
     if len(references) < limit:
         references.extend(
@@ -196,11 +172,15 @@ def _rank_official_candidates(
     scored_candidates: list[tuple[int, OfficialReferenceCandidate]] = []
     for candidate in OFFICIAL_REFERENCE_CATALOG:
         score = sum(1 for keyword in candidate.keywords if _normalize(keyword) in haystack)
+        if candidate.source == "공공데이터포털":
+            score += 2
         if score > 0:
             scored_candidates.append((score, candidate))
 
     scored_candidates.sort(key=lambda item: item[0], reverse=True)
-    return [candidate for _, candidate in scored_candidates]
+    if scored_candidates:
+        return [candidate for _, candidate in scored_candidates]
+    return list(OFFICIAL_REFERENCE_CATALOG)
 
 
 def _fetch_official_doc_preview(
@@ -242,6 +222,13 @@ def _fetch_url_preview(
         else:
             return None
     except httpx.HTTPError:
+        if fallback_title:
+            return {
+                "title": fallback_title[:120],
+                "url": url,
+                "source": source,
+                "excerpt": (fallback_excerpt or fallback_title)[:260],
+            }
         return None
 
     parsed_url = urlparse(str(response.url))

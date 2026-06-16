@@ -45,6 +45,10 @@ export function fetchPosts(page: number, filters: PostFilters) {
   return request<PostListResponse>(`/api/v1/posts?${params.toString()}`);
 }
 
+export function fetchPost(postId: number) {
+  return request<Post>(`/api/v1/posts/${postId}`);
+}
+
 export function fetchComments(postId: number) {
   return request<Comment[]>(`/api/v1/posts/${postId}/comments`);
 }

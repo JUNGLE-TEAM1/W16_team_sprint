@@ -1,4 +1,4 @@
-import { Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
+import { ArrowRight, Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
 
 import type { AgentWritingAssistResponse, DraftPost, RagAssistResponse } from "../types";
 import { riskText } from "../utils";
@@ -17,6 +17,7 @@ type WriteColumnProps = {
   onWritingAgent: () => void;
   onApplyAgentSuggestion: () => void;
   onRagAssist: () => void;
+  onOpenMatchedPost: (postId: number) => void;
 };
 
 export function WriteColumn({
@@ -33,6 +34,7 @@ export function WriteColumn({
   onWritingAgent,
   onApplyAgentSuggestion,
   onRagAssist,
+  onOpenMatchedPost,
 }: WriteColumnProps) {
   return (
     <aside className="writeColumn">
@@ -62,7 +64,7 @@ export function WriteColumn({
           <form className="composerForm" onSubmit={(event) => event.preventDefault()}>
             <input
               aria-label="상담 제목"
-              placeholder="예: 서울 24세 취준생 월세 지원 상담"
+              placeholder="예: 수원시 24세 청년 월세 지원 상담"
               value={draftPost.title}
               onChange={(event) => onDraftPostChange({ ...draftPost, title: event.target.value })}
               required
@@ -70,7 +72,7 @@ export function WriteColumn({
             />
             <textarea
               aria-label="상담 내용"
-              placeholder="거주 지역, 나이, 소득, 고용 상태, 주거 상황을 적어 주세요."
+              placeholder="수원시 거주 여부, 나이, 소득, 고용 상태, 필요한 지원을 적어 주세요."
               value={draftPost.content}
               onChange={(event) => onDraftPostChange({ ...draftPost, content: event.target.value })}
               required
@@ -79,7 +81,7 @@ export function WriteColumn({
               <Tag size={15} />
               <input
                 aria-label="태그"
-                placeholder="청년, 주거, 마포구"
+                placeholder="수원시, 청년, 월세"
                 value={draftPost.tagNames}
                 onChange={(event) => onDraftPostChange({ ...draftPost, tagNames: event.target.value })}
               />
@@ -157,19 +159,29 @@ export function WriteColumn({
           <p>{ragResult.recommendation}</p>
           <div className="ragMatches">
             {ragResult.matches.map((match) => (
-              <article className="ragMatch" key={match.post_id}>
+              <button
+                className="ragMatch"
+                key={match.post_id}
+                type="button"
+                onClick={() => onOpenMatchedPost(match.post_id)}
+                aria-label={`${match.title} 상세 보기`}
+              >
                 <strong>{match.title}</strong>
                 <span>
                   {Math.round(match.score * 100)}% · {riskText(match.duplicate_risk)}
                 </span>
                 <p>{match.summary}</p>
-              </article>
+                <span className="ragMatchAction">
+                  상세 보기
+                  <ArrowRight size={13} />
+                </span>
+              </button>
             ))}
-            {ragResult.matches.length === 0 && <p className="muted">가까운 지원 카드가 없습니다.</p>}
+            {ragResult.matches.length === 0 && <p className="muted">가까운 수원시 청년정책 카드가 없습니다.</p>}
           </div>
           {ragResult.references.length > 0 && (
             <div className="ragReferences">
-              <span className="kicker">Public Data References</span>
+              <span className="kicker">Suwon Policy References</span>
               {ragResult.references.map((reference) => (
                 <a href={reference.url} key={reference.url} target="_blank" rel="noreferrer">
                   <span>

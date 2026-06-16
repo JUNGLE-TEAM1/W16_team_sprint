@@ -23,8 +23,8 @@ export function SearchToolbar({
       <form className="searchForm" onSubmit={onSearch}>
         <Search size={18} />
         <input
-          aria-label="지원 카드 검색"
-          placeholder="청년월세, 마포구, 취업, 복지시설"
+          aria-label="수원 청년정책 검색"
+          placeholder="청년월세, 취업, 창업, 교육, 수원시"
           value={filters.q}
           onChange={(event) => onFiltersChange({ ...filters, q: event.target.value })}
         />

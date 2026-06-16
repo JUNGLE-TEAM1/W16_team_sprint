@@ -21,10 +21,10 @@ export function AppHeader({
         <button className="plainIcon" type="button" aria-label="메뉴">
           <Menu size={25} />
         </button>
-        <span className="wordmark">lifematch</span>
+        <span className="wordmark">suwon youth</span>
       </div>
 
-      <div className="pageTitle">AI 생활지원 매칭</div>
+      <div className="pageTitle">AI 수원 청년정책 매칭</div>
 
       <div className="headerActions">
         <button className="plainIcon" type="button" onClick={onRefresh} aria-label="새로고침">

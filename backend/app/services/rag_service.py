@@ -210,13 +210,9 @@ class RagService:
         except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
             return self._recommendation(matches, duplicate_warning), matches, False
 
-        recommendation = llm_payload.get("recommendation")
-        if not isinstance(recommendation, str) or not recommendation.strip():
-            raise AppError(
-                code="LLM_ASSIST_INVALID_RESPONSE",
-                message="LLM assist returned an invalid recommendation.",
-                status_code=status.HTTP_502_BAD_GATEWAY,
-            )
+        recommendation = self._string_from_llm_value(llm_payload.get("recommendation"))
+        if not recommendation:
+            return self._recommendation(matches, duplicate_warning), matches, False
 
         summaries = self._summary_map_from_llm(llm_payload.get("match_summaries"))
         enriched_matches = [
@@ -240,8 +236,8 @@ class RagService:
                 {
                     "role": "system",
                     "content": (
-                        "너는 공공데이터 기반 생활지원 매칭 RAG 상담 어시스턴트다. "
-                        "사용자의 상담 상황, 제공된 지원 카드 후보, 참고자료만 근거로 한국어 추천을 작성한다. "
+                        "너는 경기도 수원시 청년지원사업 API 기반 RAG 상담 어시스턴트다. "
+                        "사용자의 상담 상황, 제공된 수원시 청년정책 카드 후보, 참고자료만 근거로 한국어 추천을 작성한다. "
                         "새 사실을 지어내지 말고 JSON만 반환한다."
                     ),
                 },
@@ -296,9 +292,10 @@ class RagService:
         return json.dumps(
             {
                 "task": (
-                    "생활지원 추천 문구 1개와 후보별 요약을 JSON으로 작성하세요. "
-                    "recommendation은 260자 이내로 받을 수 있는 지원 후보, 조건 충족/부족 사유, "
-                    "신청 체크리스트, 상담 경로를 포함하세요. summary는 후보당 120자 이내. "
+                    "수원시 청년정책 추천 문구 1개와 후보별 요약을 JSON으로 작성하세요. "
+                    "recommendation은 260자 이내로 받을 수 있는 수원시 지원사업 후보, 조건 충족/부족 사유, "
+                    "신청 체크리스트, 문의처/상담 경로를 포함하세요. summary는 후보당 120자 이내. "
+                    "recommendation과 summary 값은 객체가 아니라 반드시 문자열로만 작성하세요. "
                     "조건이 불확실하면 추가 확인이 필요하다고 명확히 말하세요."
                 ),
                 "output_schema": {
@@ -364,9 +361,41 @@ class RagService:
                 continue
             post_id = item.get("post_id")
             summary = item.get("summary")
-            if isinstance(post_id, int) and isinstance(summary, str) and summary.strip():
-                summaries[post_id] = summary.strip()
+            summary_text = self._string_from_llm_value(summary)
+            if isinstance(post_id, int) and summary_text:
+                summaries[post_id] = summary_text
         return summaries
+
+    def _string_from_llm_value(self, value: Any) -> str:
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, list):
+            return ", ".join(
+                text for item in value if (text := self._string_from_llm_value(item))
+            ).strip()
+        if not isinstance(value, dict):
+            return ""
+
+        parts: list[str] = []
+        for key in (
+            "text",
+            "summary",
+            "conditions_met",
+            "conditions_not_met",
+            "application_checklist",
+            "checklist",
+            "contact_info",
+            "contact",
+        ):
+            text = self._string_from_llm_value(value.get(key))
+            if text:
+                parts.append(text)
+        if parts:
+            return " ".join(parts).strip()
+
+        return " ".join(
+            text for item in value.values() if (text := self._string_from_llm_value(item))
+        ).strip()
 
     def _vector_dimensions(self, vector_json: str) -> int:
         try:
@@ -396,7 +425,7 @@ class RagService:
 
     def _recommendation(self, matches: list[RagMatch], duplicate_warning: bool) -> str:
         if not matches:
-            return "가까운 지원 카드를 찾지 못했습니다. 지역, 나이, 소득, 주거 상태를 더 구체적으로 적어 다시 매칭해 보세요."
+            return "가까운 수원시 청년정책 카드를 찾지 못했습니다. 수원시 거주 여부, 나이, 소득, 필요한 지원 분야를 더 구체적으로 적어 다시 매칭해 보세요."
         if duplicate_warning:
-            return "관련도가 높은 지원 카드가 있습니다. 대상 조건과 신청기간을 먼저 확인하고, 주민센터나 담당 기관 상담으로 자격을 확정하세요."
-        return "연결 가능한 지원 카드가 있습니다. 상위 후보의 지역, 대상, 문의처를 비교하고 부족한 조건은 상담 메모로 보강해 보세요."
+            return "관련도가 높은 수원시 청년정책 카드가 있습니다. 대상 조건과 사업기간을 먼저 확인하고, 담당 부서나 문의처로 자격을 확정하세요."
+        return "연결 가능한 수원시 청년정책 카드가 있습니다. 상위 후보의 사업내용, 기간, 문의처를 비교하고 부족한 조건은 상담 메모로 보강해 보세요."

@@ -778,8 +778,23 @@ textarea:focus {
 .ragMatch {
   display: grid;
   gap: 5px;
+  width: 100%;
+  border: 0;
   border-top: 1px solid rgba(0, 143, 123, 0.16);
+  background: transparent;
   padding-top: 10px;
+  color: inherit;
+  text-align: left;
+}
+
+.ragMatch:hover strong,
+.ragMatch:focus-visible strong {
+  color: var(--accent-dark);
+}
+
+.ragMatch:focus-visible {
+  outline: 2px solid rgba(0, 143, 123, 0.35);
+  outline-offset: 3px;
 }
 
 .ragMatch strong {
@@ -797,6 +812,17 @@ textarea:focus {
   margin: 0;
   color: #666666;
   font-size: 0.82rem;
+}
+
+.ragMatchAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  margin-top: 2px;
+  color: var(--accent-dark);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .readerWrap {

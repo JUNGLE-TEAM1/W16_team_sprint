@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PAGE_SIZE } from "../api";
-import { fetchPosts, fetchTags } from "../services/boardApi";
+import { fetchPost, fetchPosts, fetchTags } from "../services/boardApi";
 import type { Post, PostFilters, PostMeta, Tag } from "../types";
 
 type UsePostFeedOptions = {
@@ -17,13 +17,16 @@ export function usePostFeed({ setError }: UsePostFeedOptions) {
     pages: 0,
   });
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [selectedPostOverride, setSelectedPostOverride] = useState<Post | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [filters, setFilters] = useState<PostFilters>({ q: "", tag: "" });
   const [loadingPosts, setLoadingPosts] = useState(false);
 
   const selectedPost = useMemo(
-    () => posts.find((post) => post.id === selectedPostId) ?? null,
-    [posts, selectedPostId],
+    () =>
+      posts.find((post) => post.id === selectedPostId) ??
+      (selectedPostOverride?.id === selectedPostId ? selectedPostOverride : null),
+    [posts, selectedPostId, selectedPostOverride],
   );
   const hasActiveFilters = Boolean(filters.q.trim() || filters.tag.trim());
   const selectedTag = filters.tag.trim();
@@ -45,6 +48,9 @@ export function usePostFeed({ setError }: UsePostFeedOptions) {
       setPostMeta({ page: body.page, size: body.size, total: body.total, pages: body.pages });
       const fallbackId = nextSelectedId ?? selectedPostId ?? body.items[0]?.id ?? null;
       setSelectedPostId(body.items.some((post) => post.id === fallbackId) ? fallbackId : body.items[0]?.id ?? null);
+      if (body.items.some((post) => post.id === fallbackId)) {
+        setSelectedPostOverride(null);
+      }
     } catch (requestError) {
       setPosts([]);
       setSelectedPostId(null);
@@ -71,6 +77,25 @@ export function usePostFeed({ setError }: UsePostFeedOptions) {
     await loadPosts(1, nextFilters);
   }
 
+  async function selectPost(postId: number) {
+    setSelectedPostId(postId);
+    const listedPost = posts.find((post) => post.id === postId);
+    if (listedPost) {
+      setSelectedPostOverride(null);
+      return listedPost;
+    }
+
+    try {
+      const post = await fetchPost(postId);
+      setSelectedPostOverride(post);
+      return post;
+    } catch (requestError) {
+      setSelectedPostId(selectedPostId);
+      setError(requestError instanceof Error ? requestError.message : "지원 카드 상세를 불러오지 못했습니다.");
+      return null;
+    }
+  }
+
   useEffect(() => {
     void loadPosts(1);
     void loadTags();
@@ -90,6 +115,7 @@ export function usePostFeed({ setError }: UsePostFeedOptions) {
     selectedPost,
     selectedPostId,
     selectedTag,
+    selectPost,
     setFilters,
     setSelectedPostId,
     tags,

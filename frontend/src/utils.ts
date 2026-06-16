@@ -35,7 +35,7 @@ export function readingMinutes(value: string) {
 
 export function supportBadge(post: Post) {
   const match = post.title.match(/^\[([^\]/]+)/);
-  return match ? match[1] : post.author_name === "data-bot" ? "카드" : "상담";
+  return match ? match[1] : post.author_name === "data-bot" ? "정책" : "상담";
 }
 
 export function riskText(risk: RagMatch["duplicate_risk"]) {

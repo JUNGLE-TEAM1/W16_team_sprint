@@ -11,6 +11,15 @@ import { useLifeSupportBoard } from "./hooks/useLifeSupportBoard";
 export function App() {
   const board = useLifeSupportBoard();
 
+  function handleOpenMatchedPost(postId: number) {
+    void board.selectPost(postId).then((post) => {
+      if (!post) return;
+      requestAnimationFrame(() => {
+        document.querySelector(".readerWrap")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
   return (
     <main className="brunchShell">
       <AppHeader
@@ -59,7 +68,7 @@ export function App() {
           hasActiveFilters={board.hasActiveFilters}
           loadingPosts={board.loadingPosts}
           onLoadPage={(page) => void board.loadPosts(page)}
-          onSelectPost={board.setSelectedPostId}
+          onSelectPost={(postId) => void board.selectPost(postId)}
           onClearFilters={() => void board.clearFilters()}
         />
 
@@ -77,6 +86,7 @@ export function App() {
           onWritingAgent={() => void board.handleWritingAgent()}
           onApplyAgentSuggestion={board.applyAgentSuggestion}
           onRagAssist={() => void board.handleRagAssist()}
+          onOpenMatchedPost={handleOpenMatchedPost}
         />
       </section>
 

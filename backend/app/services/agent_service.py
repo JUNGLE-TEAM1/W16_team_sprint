@@ -13,16 +13,18 @@ from backend.app.schemas.agent import AgentWritingAssistRequest, AgentWritingAss
 
 
 KEYWORD_TAGS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("청년", ("청년", "24세", "취준생", "대학생", "사회초년생")),
-    ("주거", ("주거", "월세", "전세", "보증금", "임대차", "원룸")),
-    ("취업", ("취업", "구직", "면접", "일자리", "훈련", "내일배움")),
-    ("복지", ("복지", "지원", "급여", "수당", "바우처", "긴급")),
-    ("복지시설", ("복지관", "시설", "센터", "주민센터", "상담센터")),
-    ("서울", ("서울", "서울시")),
-    ("마포구", ("마포", "마포구", "홍대")),
-    ("저소득", ("소득 없음", "저소득", "기초생활", "생계", "실직")),
-    ("장애", ("장애", "발달장애", "활동지원")),
-    ("노인", ("노인", "어르신", "돌봄", "요양")),
+    ("수원시", ("수원", "수원시", "팔달구", "영통구", "권선구", "장안구")),
+    ("경기도", ("경기도", "경기")),
+    ("청년", ("청년", "대학생", "취준생", "구직자", "사회초년생", "24세")),
+    ("주거", ("주거", "월세", "임차", "전세", "보증금", "원룸")),
+    ("월세", ("월세", "임차료")),
+    ("취업", ("취업", "구직", "면접", "일자리", "직장")),
+    ("창업", ("창업", "사업화", "스타트업")),
+    ("교육", ("교육", "강의", "강좌", "학습", "훈련")),
+    ("금융", ("금융", "저축", "통장", "자산", "대출")),
+    ("문화", ("문화", "예술", "활동", "축제")),
+    ("상담", ("상담", "멘토링", "컨설팅", "코칭")),
+    ("교통", ("교통", "버스", "통학")),
 )
 
 
@@ -41,14 +43,14 @@ class AgentService:
             return AgentWritingAssistResponse(
                 provider="openai",
                 model=settings.openai_llm_model,
-                suggested_title=self._string_value(data.get("suggested_title"), "작성 초안"),
+                suggested_title=self._string_value(data.get("suggested_title"), "수원시 청년정책 상담"),
                 suggested_content=self._string_value(data.get("suggested_content"), ""),
                 suggested_tag_names=self._tag_values(data.get("suggested_tag_names")),
                 outline=self._list_values(data.get("outline"), minimum=3),
                 next_questions=self._list_values(data.get("next_questions"), minimum=3),
                 agent_steps=[
                     "상담 내용을 읽었습니다.",
-                    "생활지원 매칭에 필요한 조건을 정리했습니다.",
+                    "수원시 청년지원사업 API 카드와 매칭하기 좋은 조건을 정리했습니다.",
                     "태그와 추가 확인 질문을 추천했습니다.",
                 ],
                 confidence=self._confidence(data.get("confidence")),
@@ -68,8 +70,9 @@ class AgentService:
                 {
                     "role": "system",
                     "content": (
-                        "너는 생활지원 상담 케이스 작성 Agent다. 사용자의 상황을 바탕으로 "
-                        "상담 제목, 정리된 상황 본문, 태그, 확인할 항목, 다음 질문을 JSON으로만 추천한다."
+                        "너는 수원시 청년정책 상담 케이스 작성 Agent다. "
+                        "사용자의 상황을 바탕으로 상담 제목, 정리된 본문, 수원시 청년정책 태그, "
+                        "추가 확인 질문을 JSON으로만 추천한다."
                     ),
                 },
                 {
@@ -115,30 +118,30 @@ class AgentService:
         content = payload.content.strip()
         tags = self._suggest_tags(payload)
         outline = [
-            "현재 상황과 거주 지역 정리하기",
-            "소득, 나이, 가구 형태, 주거 조건 확인하기",
-            "원하는 지원과 긴급도를 다음 액션으로 정리하기",
+            "수원시 거주 여부와 나이 조건 정리",
+            "소득, 고용 상태, 주거/취업/창업 등 필요한 지원 분야 확인",
+            "수원시 청년지원사업 카드와 매칭할 신청 조건 정리",
         ]
         next_questions = [
-            "현재 주민등록상 거주 지역과 실제 거주지는 어디인가요?",
-            "최근 3개월 소득, 고용 상태, 가구원 수는 어떻게 되나요?",
-            "가장 급한 문제가 주거비, 취업, 의료, 돌봄 중 무엇인가요?",
+            "현재 주민등록상 거주지가 수원시인가요?",
+            "만 나이, 고용 상태, 최근 소득 수준은 어떻게 되나요?",
+            "가장 급한 문제가 월세, 취업, 창업, 교육, 문화 활동 중 무엇인가요?",
         ]
 
         return AgentWritingAssistResponse(
             provider="none",
-            model="rule-life-support-agent",
+            model="rule-suwon-youth-agent",
             suggested_title=title,
             suggested_content=self._draft_content(title=title, content=content, outline=outline),
             suggested_tag_names=tags,
             outline=outline,
             next_questions=next_questions,
             agent_steps=[
-                "입력된 상담 상황을 읽었습니다.",
-                "핵심 조건으로 태그 후보를 골랐습니다.",
-                "지원 매칭에 필요한 형식으로 초안을 정리했습니다.",
+                "입력한 상담 상황을 읽었습니다.",
+                "수원시 청년정책 기준 태그 후보를 골랐습니다.",
+                "AI 매칭에 필요한 형식으로 상담 초안을 정리했습니다.",
             ],
-            confidence=0.68 if content else 0.52,
+            confidence=0.7 if content else 0.52,
         )
 
     def _suggest_tags(self, payload: AgentWritingAssistRequest) -> list[str]:
@@ -153,14 +156,14 @@ class AgentService:
                 suggested_tags.append(tag_name)
 
         if not suggested_tags:
-            suggested_tags.extend(["상담", "복지", "생활지원"])
+            suggested_tags.extend(["수원시", "청년", "청년정책"])
 
         return suggested_tags[:5]
 
     def _fallback_title(self, payload: AgentWritingAssistRequest) -> str:
         text = payload.content.strip()
         if not text:
-            return "생활지원 상담 케이스"
+            return "수원시 청년정책 상담"
 
         first_line = re.sub(r"\s+", " ", text.splitlines()[0]).strip()
         if len(first_line) <= 60:
@@ -180,11 +183,11 @@ class AgentService:
         return (
             f"{title}\n\n"
             "현재 상황\n"
-            "거주 지역, 나이, 고용 상태, 소득, 가구 형태를 적습니다.\n\n"
+            "수원시 거주 여부, 나이, 고용 상태, 소득, 필요한 지원 분야를 적습니다.\n\n"
             "필요한 지원\n"
-            "주거비, 취업, 의료, 돌봄, 긴급생계 중 우선순위를 적습니다.\n\n"
+            "월세, 취업, 창업, 교육, 문화 활동 중 우선순위를 적습니다.\n\n"
             "다음 액션\n"
-            "AI 매칭으로 지원 카드와 신청 체크리스트를 확인합니다."
+            "AI 매칭으로 수원시 청년지원사업 카드와 신청 체크리스트를 확인합니다."
         )
 
     def _extract_response_text(self, data: dict[str, Any]) -> str:
@@ -224,9 +227,9 @@ class AgentService:
 
     def _tag_values(self, value: Any) -> list[str]:
         if not isinstance(value, list):
-            return ["상담", "복지"]
+            return ["수원시", "청년"]
         tags = [self._normalize_tag(item) for item in value if isinstance(item, str)]
-        return [tag for tag in tags if tag][:5] or ["상담", "복지"]
+        return [tag for tag in tags if tag][:5] or ["수원시", "청년"]
 
     def _normalize_tag(self, value: str) -> str:
         return value.strip().lower().lstrip("#")

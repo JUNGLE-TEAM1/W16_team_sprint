@@ -28,9 +28,9 @@ async def test_reference_mcp_server_exposes_fetch_tool() -> None:
         result = await session.call_tool(
             "fetch_reference_materials",
             {
-                "query_text": "서울 청년 월세 지원",
+                "query_text": "수원 청년 월세 지원",
                 "matches": [],
-                "reference_urls": ["https://www.data.go.kr/data/15143273/openapi.do"],
+                "reference_urls": ["https://infuser.odcloud.kr/oas/docs?namespace=15089956/v1"],
             },
         )
 

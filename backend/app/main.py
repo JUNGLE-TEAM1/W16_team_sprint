@@ -32,7 +32,7 @@ def create_lifespan(database_engine=engine):
 
 def create_app(database_engine=engine) -> FastAPI:
     app = FastAPI(
-        title="AI Life Support Matching Board API",
+        title="AI Suwon Youth Policy Matching Board API",
         lifespan=create_lifespan(database_engine),
     )
     register_error_handlers(app)
