@@ -56,11 +56,10 @@
 - private case 보호 정책
 - `내 상담 기록` 프론트 화면
 - 상담 상세의 `AI 답변` placeholder 섹션
+- `data-bot` 작성자 기반 공공데이터 seed/import script
 
 아직 필요한 MVP 작업:
 
-- 공공데이터 import script
-- `data-bot` 작성자 기반 지원/시설 카드 seed
 - Stack Overflow MCP provider를 공공데이터/정책 출처 provider로 교체
 - 상담 상세의 Agent 답변 생성/저장 연결
 - 정부/공공기관 톤 UI polishing
@@ -121,6 +120,42 @@ npm run build
 
 테스트도 PostgreSQL을 사용합니다. 로컬 DB schema를 크게 바꾼 뒤 테스트가 꼬이면 학습용 데이터 reset이 필요할 수 있습니다.
 
+## 공공데이터 Seed 적재
+
+기본 seed 파일:
+
+```text
+backend/app/data/public_support_seed.json
+```
+
+검증만 실행:
+
+```bash
+.venv/bin/python -m backend.app.scripts.import_public_support_seed --dry-run
+```
+
+DB에 지원/시설 카드만 빠르게 적재:
+
+```bash
+.venv/bin/python -m backend.app.scripts.import_public_support_seed --embedding-provider none
+```
+
+실제 RAG 추천까지 확인하려면 OpenAI API key가 설정된 상태에서 embedding을 함께 생성합니다.
+
+```bash
+.venv/bin/python -m backend.app.scripts.import_public_support_seed --embedding-provider openai
+```
+
+옵션:
+
+```text
+--embedding-provider none   빠른 DB seed. RAG index는 만들지 않음.
+--embedding-provider mock   테스트/로컬용 deterministic embedding.
+--embedding-provider openai 실제 RAG용 OpenAI embedding.
+--limit N                   앞에서 N개만 적재.
+--dry-run                   JSON 검증만 하고 DB에는 쓰지 않음.
+```
+
 ## 주요 코드 위치
 
 | 영역 | 파일 |
@@ -134,6 +169,9 @@ npm run build
 | RAG API | `backend/app/api/v1/ai.py` |
 | MCP API | `backend/app/api/v1/mcp.py` |
 | 게시판/상담 정책 | `backend/app/services/post_service.py` |
+| 공공데이터 import service | `backend/app/services/public_support_import_service.py` |
+| 공공데이터 seed CLI | `backend/app/scripts/import_public_support_seed.py` |
+| 공공데이터 seed JSON | `backend/app/data/public_support_seed.json` |
 | LangChain RAG index | `backend/app/services/langchain_rag_index.py` |
 | RAG 요약 | `backend/app/services/rag_summary_service.py` |
 | MCP service | `backend/app/services/mcp_service.py` |
@@ -150,12 +188,12 @@ npm run build
 - [피봇 2차 구현 기록](docs3/pivot-2/implementation-record.md)
 - [피봇 3차 MVP 방향 및 데이터 계획](docs3/pivot-3/mvp-direction-and-data-plan.md)
 - [피봇 4차 내 상담 기록 UI 구현 기록](docs3/pivot-4/implementation-record.md)
+- [피봇 5차 공공데이터 seed/import 구현 기록](docs3/pivot-5/implementation-record.md)
 - [Sprint 6 LangChain RAG 리팩토링 구현 기록](docs2/sprint-6/langchain-rag-refactor-record.md)
 - [Sprint 7 MCP 개념 및 의사결정 가이드](docs2/sprint-7/mcp-concept-and-decision-guide.md)
 
 ## 다음 구현 순서
 
-1. 공공데이터 import script와 `data-bot` seed를 만듭니다.
-2. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
-3. 상담 상세의 Agent 답변 생성/저장 흐름을 연결합니다.
-4. UI를 밝은 공공서비스 톤으로 polishing합니다.
+1. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
+2. 상담 상세의 Agent 답변 생성/저장 흐름을 연결합니다.
+3. UI를 밝은 공공서비스 톤으로 polishing합니다.

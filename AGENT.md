@@ -47,8 +47,9 @@ Prefer a fast pivot that reuses the existing application structure:
 3. The default data-model direction is to add minimal fields to `Post`, such as `post_type`, `region`, `source_name`, `source_url`, and `source_external_id`.
 4. Public-data import should use a `data-bot` author plus an import script as the default approach. Imported rows should default to `post_type=policy` or `post_type=facility`, `visibility=public`, `comment_policy=none`, and `rag_scope=public`.
 5. Stack Overflow MCP search is no longer the default product direction after the pivot; replace it with a public-data or policy-source provider when implementing MCP work.
-6. For bulk public-data loading, avoid creating posts one-by-one through the normal UI flow if that would trigger slow per-row work unnecessarily; prefer import/batch-oriented code with clear embedding behavior.
-7. Private matching requests should default to `post_type=case`, `visibility=private`, `comment_policy=none`, and `rag_scope=excluded`.
+6. For local public-data seed loading, use `python3 -m backend.app.scripts.import_public_support_seed` as the default path and choose `--embedding-provider none|mock|openai` intentionally.
+7. For bulk public-data loading, avoid creating posts one-by-one through the normal UI flow if that would trigger slow per-row work unnecessarily; prefer import/batch-oriented code with clear embedding behavior.
+8. Private matching requests should default to `post_type=case`, `visibility=private`, `comment_policy=none`, and `rag_scope=excluded`.
 
 ## UI Direction Rule
 

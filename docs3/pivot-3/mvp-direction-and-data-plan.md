@@ -1,6 +1,6 @@
 # Pivot 3차 MVP 방향 및 데이터 계획
 
-> 후속 구현: Pivot 4차에서 `내 상담 기록` 프론트 화면을 추가했습니다. 현재 다음 구현 우선순위는 공공데이터 import script와 `data-bot` seed입니다.
+> 후속 구현: Pivot 4차에서 `내 상담 기록` 프론트 화면을 추가했고, Pivot 5차에서 공공데이터 seed/import script와 `data-bot` 적재 흐름을 추가했습니다. 현재 다음 구현 우선순위는 MCP provider를 공공데이터/정책 출처 조회로 교체하는 것입니다.
 
 ## 1. 이번 결정의 핵심
 
@@ -251,19 +251,14 @@ source_external_id = 원본 row id
 
 ## 8. 바로 다음 구현
 
-1. 공공데이터 seed/import script
-   - `data-bot` 사용자를 만들거나 찾는다.
-   - 공공데이터 row를 `policy`/`facility` Post로 변환한다.
-   - bulk 적재 시 embedding 생성 전략을 정한다.
-
-2. MCP provider 교체
+1. MCP provider 교체
    - 현재 Stack Overflow provider는 피봇 전 흔적이다.
    - 공공데이터/정책 출처 조회 provider로 바꾼다.
 
-3. 상담 상세의 Agent 답변 생성/저장 흐름
+2. 상담 상세의 Agent 답변 생성/저장 흐름
    - 관련 지원 카드만 보여주는 수준에서 끝내지 않고, 신청 가능성/부족 조건/체크리스트를 `AI 답변` 섹션에 저장한다.
    - 상담이 수정되면 기존 AI 답변은 직접 수정하지 않고 재생성 필요 상태로 다룬다.
    - 상담이 삭제되면 연결된 AI 답변도 함께 삭제한다.
 
-4. UI polishing
+3. UI polishing
    - 어두운 블로그 UI가 아니라 밝은 정부/공공기관 서비스 톤으로 정리한다.

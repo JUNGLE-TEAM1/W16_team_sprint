@@ -91,6 +91,14 @@ class PostRepository:
         post.comment_count = int(comment_count_value)
         return post
 
+    def get_by_source_external_id(self, source_external_id: str) -> Post | None:
+        statement = (
+            select(Post)
+            .options(joinedload(Post.author), joinedload(Post.tag_entities))
+            .where(Post.source_external_id == source_external_id)
+        )
+        return self.db.execute(statement).unique().scalar_one_or_none()
+
     def list_private_cases_by_author(
         self,
         author_id: int,
