@@ -93,7 +93,7 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
 
   function openCompose() {
     if (!currentUser) {
-      onAuthRequired("내 상황으로 지원 찾기는 로그인이 필요합니다.");
+      onAuthRequired("상담 등록은 로그인이 필요합니다.");
       return;
     }
     setIsComposeOpen(true);
@@ -120,14 +120,14 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
   async function createPost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentUser) {
-      onAuthRequired("내 상황으로 지원 찾기는 로그인이 필요합니다.");
+      onAuthRequired("상담 등록은 로그인이 필요합니다.");
       return null;
     }
 
     const result = await request<Post>("/api/v1/posts", {
       method: "POST",
       body: buildPostBody(postForm),
-      successMessage: "내 상담 요청을 저장했습니다.",
+      successMessage: "상담을 등록했습니다.",
     });
     if (result.ok) {
       setPostForm(emptyConsultationForm());
@@ -166,13 +166,17 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
       setStatus({ text: "삭제할 지원 카드나 상담 요청을 선택하세요.", isError: true });
       return false;
     }
-    if (!window.confirm("이 항목을 삭제할까요?")) {
+    const message =
+      selectedPost.post_type === "case"
+        ? "상담 기록을 삭제할까요? 이후 연결될 AI 답변도 함께 삭제되는 흐름으로 처리합니다."
+        : "이 지원 카드를 삭제할까요?";
+    if (!window.confirm(message)) {
       return false;
     }
 
     const result = await request<Record<string, never>>(`/api/v1/posts/${selectedPost.id}`, {
       method: "DELETE",
-      successMessage: "카드를 삭제했습니다.",
+      successMessage: selectedPost.post_type === "case" ? "상담 기록을 삭제했습니다." : "카드를 삭제했습니다.",
     });
     if (result.ok) {
       setSelectedPost(null);

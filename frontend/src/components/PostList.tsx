@@ -93,7 +93,7 @@ export function PostList({
             </select>
           </label>
           <button className="submit-button compact-button" type="button" onClick={onOpenCompose}>
-            내 상황으로 지원 찾기
+            상담 등록
           </button>
         </div>
       </div>

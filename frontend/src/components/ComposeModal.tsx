@@ -41,11 +41,11 @@ export function ComposeModal({
 
   return (
     <div className="modal-backdrop">
-      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="내 상황으로 지원 찾기">
+      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="상담 등록">
         <div className="section-heading compact-heading">
           <div>
             <p className="eyebrow">Private Matching Request</p>
-            <h2>내 상황으로 지원 찾기</h2>
+            <h2>상담 등록</h2>
           </div>
           <button className="ghost-button" type="button" onClick={onClose}>
             닫기
@@ -59,7 +59,7 @@ export function ComposeModal({
               <input name="title" value={postForm.title} onChange={onChange} maxLength={120} required />
             </label>
             <label className="field">
-              <span>내 상황</span>
+              <span>상담 내용</span>
               <textarea
                 name="content"
                 value={postForm.content}
@@ -98,7 +98,7 @@ export function ComposeModal({
               </button>
             </div>
             <button className="submit-button" type="submit">
-              내 상담 요청 저장
+              상담 등록
             </button>
           </form>
           <div className="compose-side-panels">

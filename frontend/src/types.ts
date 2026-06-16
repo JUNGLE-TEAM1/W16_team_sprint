@@ -1,6 +1,7 @@
 import type { ChangeEvent, FormEvent } from "react";
 
 export type AuthView = "login" | "register" | null;
+export type BoardView = "support" | "consultations";
 export type SearchType = "title_content" | "title" | "content" | "author";
 export type SortType = "latest" | "comment_count" | "like_count";
 export type PostType = "policy" | "facility" | "case";

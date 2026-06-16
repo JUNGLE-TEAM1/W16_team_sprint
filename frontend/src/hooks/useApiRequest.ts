@@ -9,7 +9,7 @@ export type ApiRequest = <T>(
 
 export function useApiRequest() {
   const [status, setStatus] = useState<StatusState>({
-    text: "지원 정보를 탐색하거나 내 상황으로 지원을 찾아보세요.",
+    text: "지원 정보를 탐색하거나 상담을 등록해보세요.",
     isError: false,
   });
 

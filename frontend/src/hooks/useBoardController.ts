@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
-import type { Post } from "../types";
+import type { BoardView, Post } from "../types";
 import { useApiRequest } from "./useApiRequest";
 import { useAuth } from "./useAuth";
 import { useComments } from "./useComments";
+import { useConsultations } from "./useConsultations";
 import { useExternalReferences } from "./useExternalReferences";
 import { usePostSearch } from "./usePostSearch";
 import { usePosts } from "./usePosts";
@@ -12,8 +13,10 @@ import { useRelatedPosts } from "./useRelatedPosts";
 
 export function useBoardController() {
   const { status, setStatus, request } = useApiRequest();
+  const [activeView, setActiveView] = useState<BoardView>("support");
   const auth = useAuth({ request });
   const postSearch = usePostSearch({ request });
+  const consultations = useConsultations({ request });
 
   function handleAuthRequired(message: string) {
     auth.showLogin();
@@ -62,14 +65,19 @@ export function useBoardController() {
     const ok = await auth.login(event);
     if (ok) {
       await postSearch.loadPosts({ quiet: true });
+      if (activeView === "consultations") {
+        await consultations.loadConsultations({ quiet: true, page: 1 });
+      }
     }
   }
 
   async function logout() {
     const ok = await auth.logout();
     if (ok) {
+      setActiveView("support");
       postActions.clearDetail();
       comments.resetComments();
+      consultations.resetConsultations();
       relatedPosts.resetComposeRelatedPosts();
       relatedPosts.resetEditRelatedPosts();
       externalReferences.resetComposeExternalReferences();
@@ -82,7 +90,37 @@ export function useBoardController() {
     relatedPosts.resetComposeRelatedPosts();
     relatedPosts.resetEditRelatedPosts();
     externalReferences.resetComposeExternalReferences();
+    if (activeView === "consultations") {
+      await consultations.loadConsultations({ quiet: true });
+    } else {
+      await postSearch.loadPosts({ quiet: true });
+    }
+  }
+
+  async function showSupportInfo() {
+    setActiveView("support");
+    postActions.clearDetail();
+    comments.resetComments();
+    relatedPosts.resetComposeRelatedPosts();
+    relatedPosts.resetEditRelatedPosts();
+    externalReferences.resetComposeExternalReferences();
     await postSearch.loadPosts({ quiet: true });
+  }
+
+  async function showConsultations() {
+    setActiveView("consultations");
+    postActions.clearDetail();
+    comments.resetComments();
+    relatedPosts.resetComposeRelatedPosts();
+    relatedPosts.resetEditRelatedPosts();
+    externalReferences.resetComposeExternalReferences();
+
+    if (!auth.currentUser) {
+      consultations.resetConsultations();
+      handleAuthRequired("내 상담 기록은 로그인이 필요합니다.");
+      return;
+    }
+    await consultations.loadConsultations({ page: 1 });
   }
 
   function openPostEditor() {
@@ -126,10 +164,11 @@ export function useBoardController() {
   async function createPost(event: FormEvent<HTMLFormElement>) {
     const createdPost = await postActions.createPost(event);
     if (createdPost) {
+      setActiveView("consultations");
       relatedPosts.resetComposeRelatedPosts();
       externalReferences.resetComposeExternalReferences();
       await postSearch.loadTags({ quiet: true });
-      await postSearch.loadPosts({ quiet: true, filters: { page: 1 } });
+      await consultations.loadConsultations({ quiet: true, page: 1 });
       if (createdPost.comment_policy !== "none") {
         await comments.loadComments(createdPost.id, { quiet: true });
       }
@@ -151,7 +190,11 @@ export function useBoardController() {
       comments.resetComments();
       relatedPosts.resetEditRelatedPosts();
       await postSearch.loadTags({ quiet: true });
-      await postSearch.loadPosts({ quiet: true });
+      if (activeView === "consultations") {
+        await consultations.loadConsultations({ quiet: true });
+      } else {
+        await postSearch.loadPosts({ quiet: true });
+      }
     }
   }
 
@@ -174,17 +217,24 @@ export function useBoardController() {
     await externalReferences.findComposeExternalReferences(postActions.postForm);
   }
 
+  async function changeConsultationPage(nextPage: number) {
+    await consultations.loadConsultations({ page: nextPage });
+  }
+
   return {
+    activeView,
     authView: auth.authView,
     authForm: auth.authForm,
     currentUser: auth.currentUser,
     posts: postSearch.posts,
+    consultations: consultations.consultations,
     tags: postSearch.tags,
     selectedPost: postActions.selectedPost,
     isComposeOpen: postActions.isComposeOpen,
     comments: comments.comments,
     search: postSearch.search,
     pageMeta: postSearch.pageMeta,
+    consultationPageMeta: consultations.consultationPageMeta,
     postForm: postActions.postForm,
     editForm: postActions.editForm,
     composeRelatedPosts: relatedPosts.composeRelatedPosts,
@@ -207,6 +257,8 @@ export function useBoardController() {
     openPostEditor,
     closePostEditor,
     goToList,
+    showSupportInfo,
+    showConsultations,
     openCompose,
     closeCompose,
     register,
@@ -217,6 +269,7 @@ export function useBoardController() {
     clearFilters: postSearch.clearFilters,
     changeSort: postSearch.changeSort,
     changePage: postSearch.changePage,
+    changeConsultationPage,
     selectPost,
     createPost,
     updatePost,

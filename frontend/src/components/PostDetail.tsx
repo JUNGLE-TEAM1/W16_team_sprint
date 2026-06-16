@@ -15,23 +15,24 @@ import { RelatedPostsPanel, shouldShowRelatedPostsPanel } from "./RelatedPostsPa
 interface PostEditFormProps {
   editForm: PostFormState;
   relatedPosts: RelatedPostsState;
+  isPrivateCase: boolean;
   onChange: FieldChangeHandler;
   onSubmit: FormSubmitHandler;
   onCancel: () => void;
 }
 
-function PostEditForm({ editForm, relatedPosts, onChange, onSubmit, onCancel }: PostEditFormProps) {
+function PostEditForm({ editForm, relatedPosts, isPrivateCase, onChange, onSubmit, onCancel }: PostEditFormProps) {
   const hasRelatedPanel = shouldShowRelatedPostsPanel(relatedPosts);
 
   return (
     <div className={hasRelatedPanel ? "edit-layout has-related" : "edit-layout"}>
-      <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="카드 또는 상담 케이스 수정">
+      <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="카드 또는 상담 수정">
         <label className="field">
           <span>제목 수정</span>
           <input name="title" value={editForm.title} onChange={onChange} />
         </label>
         <label className="field">
-          <span>내용 수정</span>
+          <span>{isPrivateCase ? "상담 내용 수정" : "내용 수정"}</span>
           <textarea name="content" value={editForm.content} onChange={onChange} />
         </label>
         <label className="field">
@@ -53,6 +54,38 @@ function PostEditForm({ editForm, relatedPosts, onChange, onSubmit, onCancel }: 
       </form>
       <RelatedPostsPanel state={relatedPosts} />
     </div>
+  );
+}
+
+function AiAnswerSection({ isEditingPost }: { isEditingPost: boolean }) {
+  return (
+    <section className="ai-answer-card" aria-label="AI 답변">
+      <div className="section-heading compact-heading">
+        <div>
+          <p className="eyebrow">Agent Answer</p>
+          <h3>AI 답변</h3>
+        </div>
+        <span className="answer-status">답변 대기</span>
+      </div>
+      <p>
+        아직 Agent 답변 저장 기능이 연결되지 않았습니다. 다음 단계에서는 상담 내용과 공공데이터
+        지원 카드를 바탕으로 신청 가능성, 부족 조건, 준비 서류, 다음 행동을 생성해 이 영역에
+        저장합니다.
+      </p>
+      <div className="answer-policy">
+        <strong>수정/삭제 정책</strong>
+        <span>
+          상담을 수정하면 기존 AI 답변을 직접 수정하지 않고, 재생성 필요 상태로 보는 것이 안전합니다.
+          상담을 삭제하면 연결된 AI 답변도 함께 삭제하는 흐름으로 처리합니다.
+        </span>
+      </div>
+      {isEditingPost ? (
+        <div className="answer-policy warning">
+          <strong>상담 수정 중</strong>
+          <span>수정 완료 후에는 이전 AI 답변이 현재 상담 내용과 맞지 않을 수 있습니다.</span>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -230,7 +263,7 @@ export function PostDetail({
             </div>
           ) : null}
           {isAuthor ? (
-            <div className="detail-actions" aria-label="카드 또는 상담 케이스 관리">
+            <div className="detail-actions" aria-label="카드 또는 상담 관리">
               <button className="ghost-button" type="button" onClick={onOpenEditor}>
                 수정
               </button>
@@ -245,11 +278,14 @@ export function PostDetail({
           <PostEditForm
             editForm={editForm}
             relatedPosts={editRelatedPosts}
+            isPrivateCase={isPrivateCase}
             onChange={onEditChange}
             onSubmit={onUpdatePost}
             onCancel={onCancelEdit}
           />
         ) : null}
+
+        {isPrivateCase ? <AiAnswerSection isEditingPost={isEditingPost} /> : null}
 
         {canComment ? (
           <CommentsSection

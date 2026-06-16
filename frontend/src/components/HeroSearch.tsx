@@ -18,7 +18,7 @@ export function HeroSearch({
     <section className="hero" aria-label="서비스 소개">
       <p className="eyebrow">Public Support Matching</p>
       <h1>AI 생활지원 매칭 보드</h1>
-      <p>공공데이터 기반 복지정책, 청년지원, 공공시설을 찾고 내 상황은 비공개 요청으로 매칭합니다.</p>
+      <p>공공데이터 기반 복지정책, 청년지원, 공공시설을 찾고 상담은 비공개 기록으로 관리합니다.</p>
       <form className="search-bar" onSubmit={onSubmitSearch}>
         <select name="search_type" value={search.search_type} onChange={onSearchChange}>
           {SEARCH_TYPES.map((type) => (
