@@ -10,9 +10,12 @@ from fastapi import status
 from backend.app.core.config import settings
 from backend.app.core.embedding import (
     EmbeddingError,
-    LOCAL_EMBEDDING_DIMENSIONS,
+    active_embedding_model,
+    active_embedding_provider,
+    cosine_similarity,
     embed_text,
-    embed_text_local,
+    embedding_dimensions,
+    embedding_signature,
 )
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
@@ -52,50 +55,6 @@ class UnitOfWork(Protocol):
         pass
 
 
-STOP_TERMS = {
-    "관련",
-    "도움",
-    "받고",
-    "받고자",
-    "상담",
-    "수원시에서",
-    "알고",
-    "있습니다",
-    "정책",
-    "정보",
-    "제공",
-    "지원",
-    "현재",
-}
-
-DOMAIN_INTENTS: tuple[dict[str, tuple[str, ...]], ...] = (
-    {
-        "query": ("경제", "경제적", "어려움", "소득", "돈", "금전", "지원금", "생활비", "월세", "임차료", "교통비"),
-        "card": ("월세", "임차료", "교통비", "기본소득", "지원금", "자산", "저축", "금융", "만원", "분기당"),
-    },
-    {
-        "query": ("월세", "주거", "임차", "전세", "보증금", "집", "거주"),
-        "card": ("월세", "주거", "임차", "임차료", "전월세", "보증금"),
-    },
-    {
-        "query": ("취업", "구직", "취준", "면접", "일자리", "직장"),
-        "card": ("취업", "구직", "면접", "일자리", "직장", "교통비"),
-    },
-    {
-        "query": ("창업", "사업", "스타트업", "기업"),
-        "card": ("창업", "사업화", "스타트업", "기업", "컨설팅"),
-    },
-    {
-        "query": ("아이디어", "대회", "공모", "프로젝트", "활동"),
-        "card": ("아이디어", "대회", "공모", "프로젝트", "활동"),
-    },
-    {
-        "query": ("교육", "강의", "강좌", "학습", "어학", "훈련"),
-        "card": ("교육", "강의", "강좌", "학습", "어학", "훈련"),
-    },
-)
-
-
 class RagService:
     def __init__(
         self,
@@ -126,13 +85,22 @@ class RagService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
-        self._ensure_indexed()
-        current_embeddings = self._support_card_embeddings()
-        expected_dimensions = self._expected_index_dimensions(current_embeddings)
+        try:
+            self._ensure_indexed()
+            query_vector = embed_text(query_text)
+        except EmbeddingError as exc:
+            raise AppError(
+                code="QUERY_EMBEDDING_FAILED",
+                message="검색 문장 임베딩 생성에 실패했습니다. OPENAI_API_KEY와 임베딩 설정을 확인하세요.",
+                status_code=status.HTTP_502_BAD_GATEWAY,
+            ) from exc
 
+        current_embeddings = self._support_card_embeddings()
+        expected_dimensions = embedding_dimensions()
         scored_matches = []
         for embedding, post in current_embeddings:
-            score = self._match_score(query_text=query_text, post=post, source_text=embedding.source_text)
+            stored_vector = self._vector_from_json(embedding.vector_json)
+            score = max(0.0, min(1.0, cosine_similarity(query_vector, stored_vector)))
             scored_matches.append((score, post, embedding.source_text))
 
         scored_matches.sort(key=lambda match: match[0], reverse=True)
@@ -170,8 +138,8 @@ class RagService:
 
         return RagAssistResponse(
             embedding_dimensions=expected_dimensions,
-            embedding_provider="support-card-index",
-            embedding_model="query-not-embedded",
+            embedding_provider=active_embedding_provider(),
+            embedding_model=active_embedding_model(),
             llm_provider="openai" if llm_used else "none",
             llm_model=settings.openai_llm_model if llm_used else "rule-fallback",
             llm_used=llm_used,
@@ -185,19 +153,21 @@ class RagService:
 
     def _ensure_indexed(self) -> None:
         current_embeddings = self._support_card_embeddings()
-        expected_dimensions = self._expected_index_dimensions(current_embeddings)
+        expected_dimensions = embedding_dimensions()
         indexed_post_ids = {embedding.post_id for embedding, _ in current_embeddings}
-        stale_post_ids = {
-            embedding.post_id
-            for embedding, _ in current_embeddings
-            if self._vector_dimensions(embedding.vector_json) != expected_dimensions
-        }
+        embedding_by_post_id = {embedding.post_id: embedding for embedding, _ in current_embeddings}
         posts, _ = self.posts.list(page=1, size=500)
         support_posts = [post for post in posts if self._is_support_card(post)]
         try:
             for post in support_posts:
-                if post.id not in indexed_post_ids or post.id in stale_post_ids:
-                    self._upsert_post_embedding(post, expected_dimensions=expected_dimensions)
+                embedding = embedding_by_post_id.get(post.id)
+                if (
+                    post.id not in indexed_post_ids
+                    or embedding is None
+                    or self._vector_dimensions(embedding.vector_json) != expected_dimensions
+                    or embedding.source_text != self._indexed_source_text(post)
+                ):
+                    self._upsert_post_embedding(post)
             self.unit_of_work.commit()
         except Exception:
             self.unit_of_work.rollback()
@@ -213,24 +183,13 @@ class RagService:
     def _is_support_card(self, post: Post) -> bool:
         return post.author_name == "data-bot"
 
-    def _upsert_post_embedding(self, post: Post, expected_dimensions: int | None = None) -> None:
+    def _upsert_post_embedding(self, post: Post) -> None:
         source_text = self._source_text(post)
         self.embeddings.upsert(
             post_id=post.id,
-            source_text=source_text,
-            vector=self._embed_text(source_text, expected_dimensions=expected_dimensions),
+            source_text=self._indexed_source_text(post),
+            vector=embed_text(source_text),
         )
-
-    def _embed_text(self, value: str, expected_dimensions: int | None = None) -> list[float]:
-        if expected_dimensions == LOCAL_EMBEDDING_DIMENSIONS:
-            return embed_text_local(value)
-        try:
-            return embed_text(value)
-        except EmbeddingError:
-            return embed_text_local(value)
-
-    def _expected_index_dimensions(self, embeddings: list[tuple[PostEmbedding, Post]]) -> int:
-        return LOCAL_EMBEDDING_DIMENSIONS
 
     def _assist_with_llm(
         self,
@@ -451,66 +410,20 @@ class RagService:
         tag_text = " ".join(tag.name for tag in post.tags)
         return f"{post.title}\n{post.content}\n{tag_text}".strip()
 
-    def _match_score(self, *, query_text: str, post: Post, source_text: str) -> float:
-        query_terms = self._important_terms(query_text)
-        if not query_terms:
-            return 0.0
-
-        source_norm = self._match_normalize(source_text)
-        title_norm = self._match_normalize(post.title)
-        tag_norm = self._match_normalize(" ".join(tag.name for tag in post.tags))
-        searchable_norm = f"{source_norm} {title_norm} {tag_norm}"
-
-        matched_terms = [term for term in query_terms if term in searchable_norm]
-        coverage_score = min(0.3, (len(matched_terms) / max(len(query_terms), 4)) * 0.3)
-        title_score = min(0.22, sum(0.055 for term in query_terms if term in title_norm))
-        tag_score = min(0.18, sum(0.045 for term in query_terms if term in tag_norm))
-        intent_score = self._intent_score(query_text=query_text, card_text=searchable_norm)
-
-        base_score = 0.0
-        if "수원" in self._match_normalize(query_text) and "수원" in searchable_norm:
-            base_score += 0.05
-        if "청년" in self._match_normalize(query_text) and "청년" in searchable_norm:
-            base_score += 0.05
-
-        exact_phrase_score = min(
-            0.12,
-            sum(0.04 for term in matched_terms if len(term) >= 3 and term in title_norm),
-        )
-
-        score = coverage_score + title_score + tag_score + intent_score + base_score + exact_phrase_score
-        return round(max(0.0, min(0.98, score)), 3)
-
-    def _important_terms(self, value: str) -> set[str]:
-        normalized = self._match_normalize(value)
-        words = {
-            word
-            for word in re.findall(r"[a-z0-9]+|[가-힣]{2,}", normalized)
-            if word not in STOP_TERMS and len(word) >= 2
-        }
-        for intent in DOMAIN_INTENTS:
-            for keyword in (*intent["query"], *intent["card"]):
-                if keyword in normalized:
-                    words.add(keyword)
-        return words
-
-    def _intent_score(self, *, query_text: str, card_text: str) -> float:
-        query_norm = self._match_normalize(query_text)
-        score = 0.0
-        for intent in DOMAIN_INTENTS:
-            query_hits = sum(1 for keyword in intent["query"] if keyword in query_norm)
-            if query_hits == 0:
-                continue
-
-            card_hits = sum(1 for keyword in intent["card"] if keyword in card_text)
-            if card_hits == 0:
-                continue
-
-            score += min(0.24, 0.1 + (query_hits * 0.035) + (card_hits * 0.025))
-        return min(0.42, score)
-
     def _match_normalize(self, value: str) -> str:
         return re.sub(r"\s+", " ", value.lower()).strip()
+
+    def _indexed_source_text(self, post: Post) -> str:
+        return f"__embedding_index__:{embedding_signature()}\n{self._source_text(post)}"
+
+    def _vector_from_json(self, vector_json: str) -> list[float]:
+        try:
+            vector = json.loads(vector_json)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(vector, list):
+            return []
+        return [float(component) for component in vector if isinstance(component, int | float)]
 
     def _mvp_highlight(self, *, query_text: str, matches: list[RagMatch]) -> RagMvpHighlight | None:
         if not matches:

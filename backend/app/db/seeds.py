@@ -12,7 +12,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
-from backend.app.core.embedding import embed_text_local
+from backend.app.core.embedding import embed_text, embedding_dimensions, embedding_signature
 from backend.app.core.security import hash_password
 from backend.app.models.post import Post
 from backend.app.models.post_embedding import PostEmbedding
@@ -358,19 +358,39 @@ def _get_or_create_tag(db: Session, tag_name: str) -> Tag:
 
 def _ensure_post_embedding(db: Session, post: Post) -> None:
     source_text = f"{post.title}\n{post.content}\n{' '.join(tag.name for tag in post.tags)}".strip()
-    vector = embed_text_local(source_text)
+    indexed_source_text = _indexed_source_text(source_text)
 
     embedding = db.get(PostEmbedding, post.id)
+    if (
+        embedding is not None
+        and embedding.source_text == indexed_source_text
+        and _vector_dimensions(embedding.vector_json) == embedding_dimensions()
+    ):
+        return
+
+    vector = embed_text(source_text)
     if embedding is None:
         db.add(
             PostEmbedding(
                 post_id=post.id,
-                source_text=source_text,
+                source_text=indexed_source_text,
                 vector_json=json.dumps(vector),
             )
         )
         db.flush()
         return
 
-    embedding.source_text = source_text
+    embedding.source_text = indexed_source_text
     embedding.vector_json = json.dumps(vector)
+
+
+def _indexed_source_text(source_text: str) -> str:
+    return f"__embedding_index__:{embedding_signature()}\n{source_text}"
+
+
+def _vector_dimensions(vector_json: str) -> int:
+    try:
+        vector = json.loads(vector_json)
+    except json.JSONDecodeError:
+        return 0
+    return len(vector) if isinstance(vector, list) else 0

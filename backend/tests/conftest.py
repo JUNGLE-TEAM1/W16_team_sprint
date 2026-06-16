@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import math
 
 import pytest
 
@@ -62,7 +63,28 @@ def use_local_ai_settings(monkeypatch) -> None:
     from backend.app.db import seeds
     from backend.app.services import agent_service, rag_service
 
+    def fake_embed_text(value: str) -> list[float]:
+        normalized = value.lower()
+        vector = [0.0] * 1536
+        weighted_keywords = (
+            (0, 1.0, ("수원", "수원시")),
+            (1, 1.0, ("청년", "24세", "취준생", "구직자")),
+            (2, 3.0, ("월세", "임차", "임차료", "주거")),
+            (3, 3.0, ("취업", "구직", "면접", "일자리", "교통비")),
+            (4, 3.0, ("창업", "사업화", "스타트업")),
+            (5, 2.0, ("경제", "어려움", "생활비", "소득", "지원금")),
+            (6, 1.5, ("교육", "강의", "컨설팅")),
+        )
+        for index, weight, keywords in weighted_keywords:
+            if any(keyword in normalized for keyword in keywords):
+                vector[index] = weight
+        norm = math.sqrt(sum(component * component for component in vector))
+        return [component / norm for component in vector] if norm else vector
+
     monkeypatch.setattr(embedding, "settings", local_settings)
     monkeypatch.setattr(agent_service, "settings", local_settings)
     monkeypatch.setattr(rag_service, "settings", local_settings)
+    monkeypatch.setattr(embedding, "embed_text", fake_embed_text)
+    monkeypatch.setattr(seeds, "embed_text", fake_embed_text)
+    monkeypatch.setattr(rag_service, "embed_text", fake_embed_text)
     monkeypatch.setattr(seeds, "fetch_suwon_youth_policy_cards", lambda: TEST_SUWON_POLICY_CARDS)

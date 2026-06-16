@@ -19,10 +19,20 @@ def active_embedding_provider() -> str:
     return "local-hash"
 
 
+def active_embedding_model() -> str:
+    if active_embedding_provider() == "openai":
+        return settings.openai_embedding_model
+    return f"local-hash-{LOCAL_EMBEDDING_DIMENSIONS}"
+
+
 def embedding_dimensions() -> int:
     if active_embedding_provider() == "openai":
         return settings.openai_embedding_dimensions
     return LOCAL_EMBEDDING_DIMENSIONS
+
+
+def embedding_signature() -> str:
+    return f"cosine-v1:{active_embedding_provider()}:{active_embedding_model()}:{embedding_dimensions()}"
 
 
 def normalize_text(value: str) -> str:
@@ -87,12 +97,10 @@ def _embed_with_openai(value: str) -> list[float]:
 def cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right or len(left) != len(right):
         return 0.0
-    return sum(left_component * right_component for left_component, right_component in zip(left, right))
-
-
-def token_overlap(left: str, right: str) -> float:
-    left_tokens = set(tokens(left))
-    right_tokens = set(tokens(right))
-    if not left_tokens or not right_tokens:
+    dot_product = sum(left_component * right_component for left_component, right_component in zip(left, right))
+    left_norm = math.sqrt(sum(component * component for component in left))
+    right_norm = math.sqrt(sum(component * component for component in right))
+    if left_norm == 0 or right_norm == 0:
         return 0.0
-    return len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+    return dot_product / (left_norm * right_norm)
+
