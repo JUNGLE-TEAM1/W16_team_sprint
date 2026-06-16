@@ -28,7 +28,8 @@ AI 지식 공유 게시판은 개발자와 학습자가 질문, 트러블슈팅,
 | Backend/API | FastAPI |
 | Database | PostgreSQL |
 | ORM | SQLAlchemy |
-| AI/RAG DB | pgvector 예정 |
+| AI/RAG | LangChain + OpenAI Embeddings |
+| AI/RAG DB | PostgreSQL + pgvector |
 | Auth | Session 인증을 main auth로 선택 |
 
 OAuth/OIDC는 현재 필수 구현 범위가 아니며, 필요 시 추후 확장 학습 주제로 다룹니다.
@@ -156,6 +157,8 @@ docker compose up -d db
 - [Sprint 1 구현 기록](docs2/sprint-1/implementation-record.md)
 - [Sprint 2 Session 인증 의사결정과 전체 흐름](docs2/sprint-2/session-auth-decision-and-flow.md)
 - [Sprint 2 구현 기록](docs2/sprint-2/implementation-record.md)
+- [Sprint 6 LangChain RAG 리팩토링 구현 기록](docs2/sprint-6/langchain-rag-refactor-record.md)
+- [Sprint 7 MCP 개념 및 의사결정 가이드](docs2/sprint-7/mcp-concept-and-decision-guide.md)
 - [스프린트 1 파일 구조](docs/sprint-1-file-structure.md)
 - [스프린트 1 API 데이터 흐름](docs/sprint-1-api-data-flow.md)
 - [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)

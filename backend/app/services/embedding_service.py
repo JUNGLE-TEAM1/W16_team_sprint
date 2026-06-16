@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Any, Protocol
+
+from langchain_core.embeddings import Embeddings
+from langchain_openai import OpenAIEmbeddings
 
 from backend.app.core.config import settings
 from backend.app.models.post import Post
@@ -13,8 +16,14 @@ class EmbeddingProvider(Protocol):
     def embed(self, text: str) -> list[float]:
         raise NotImplementedError
 
+    def embed_query(self, text: str) -> list[float]:
+        raise NotImplementedError
 
-class OpenAIEmbeddingProvider:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        raise NotImplementedError
+
+
+class OpenAIEmbeddingProvider(Embeddings):
     def __init__(
         self,
         api_key: str | None = settings.openai_api_key,
@@ -22,26 +31,35 @@ class OpenAIEmbeddingProvider:
     ) -> None:
         self.api_key = api_key
         self.model = model
+        self._embeddings: OpenAIEmbeddings | None = None
 
     def embed(self, text: str) -> list[float]:
+        return self.embed_query(text)
+
+    def embed_query(self, text: str) -> list[float]:
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured")
+        return [float(value) for value in self._client().embed_query(text)]
 
-        try:
-            from openai import OpenAI
-        except ImportError as exc:
-            raise RuntimeError("openai package is not installed") from exc
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not self.api_key:
+            raise RuntimeError("OPENAI_API_KEY is not configured")
+        return [[float(value) for value in embedding] for embedding in self._client().embed_documents(texts)]
 
-        client = OpenAI(api_key=self.api_key)
-        response = client.embeddings.create(model=self.model, input=text)
-        return [float(value) for value in response.data[0].embedding]
+    def _client(self) -> OpenAIEmbeddings:
+        if self._embeddings is None:
+            self._embeddings = OpenAIEmbeddings(model=self.model, api_key=self.api_key)
+        return self._embeddings
 
 
-class MockEmbeddingProvider:
+class MockEmbeddingProvider(Embeddings):
     def __init__(self, dimensions: int = EMBEDDING_DIMENSIONS) -> None:
         self.dimensions = dimensions
 
     def embed(self, text: str) -> list[float]:
+        return self.embed_query(text)
+
+    def embed_query(self, text: str) -> list[float]:
         values: list[float] = []
         seed = text.encode("utf-8")
         block_index = 0
@@ -50,6 +68,33 @@ class MockEmbeddingProvider:
             values.extend((byte / 127.5) - 1.0 for byte in digest)
             block_index += 1
         return values[: self.dimensions]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed_query(text) for text in texts]
+
+
+class LangChainEmbeddingAdapter(Embeddings):
+    def __init__(self, provider: EmbeddingProvider | Embeddings | Any) -> None:
+        self.provider = provider
+
+    def embed_query(self, text: str) -> list[float]:
+        if hasattr(self.provider, "embed_query"):
+            return [float(value) for value in self.provider.embed_query(text)]
+        return [float(value) for value in self.provider.embed(text)]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if hasattr(self.provider, "embed_documents"):
+            return [
+                [float(value) for value in embedding]
+                for embedding in self.provider.embed_documents(texts)
+            ]
+        return [self.embed_query(text) for text in texts]
+
+
+def as_langchain_embeddings(provider: EmbeddingProvider | Embeddings | Any) -> Embeddings:
+    if isinstance(provider, Embeddings):
+        return provider
+    return LangChainEmbeddingAdapter(provider)
 
 
 class PostEmbeddingService:
@@ -85,7 +130,7 @@ class PostEmbeddingService:
         }
 
     def embed(self, text: str) -> list[float]:
-        embedding = self.provider.embed(text)
+        embedding = as_langchain_embeddings(self.provider).embed_query(text)
         if len(embedding) != self.dimensions:
             raise ValueError(
                 f"embedding dimension mismatch: expected {self.dimensions}, got {len(embedding)}"

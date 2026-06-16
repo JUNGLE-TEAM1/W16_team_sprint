@@ -15,6 +15,7 @@ from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
 from backend.app.schemas.post import PostCreate, PostPage, PostSearchType, PostSortType, PostUpdate
 from backend.app.services.embedding_service import PostEmbeddingService
+from backend.app.services.langchain_rag_index import LangChainPostVectorIndex
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +28,14 @@ class PostService:
         tags: TagRepository | None = None,
         embeddings: PostEmbeddingRepository | None = None,
         embedding_service: PostEmbeddingService | None = None,
+        rag_index: LangChainPostVectorIndex | None = None,
     ) -> None:
         self.db = db
         self.posts = posts
         self.tags = tags
         self.embeddings = embeddings
         self.embedding_service = embedding_service
+        self.rag_index = rag_index
 
     def create(self, payload: PostCreate, author_id: int) -> Post:
         post = Post(**payload.model_dump(exclude={"tags"}), author_id=author_id)
@@ -114,6 +117,7 @@ class PostService:
     def delete(self, post_id: int, author_id: int) -> None:
         post = self.get(post_id)
         self._ensure_author(post, author_id)
+        self._delete_embedding(post.id)
         self.posts.delete(post)
         self.db.commit()
 
@@ -143,6 +147,13 @@ class PostService:
         metadata = self.embedding_service.build_metadata(post)
         try:
             embedding = self.embedding_service.embed(content_snapshot)
+            if self.rag_index is not None:
+                self.rag_index.upsert_post(
+                    post=post,
+                    content_snapshot=content_snapshot,
+                    embedding=embedding,
+                    metadata=metadata,
+                )
             self.embeddings.upsert_completed(
                 post_id=post.id,
                 embedding=embedding,
@@ -159,6 +170,14 @@ class PostService:
                 metadata=metadata,
                 error_message=str(exc),
             )
+
+    def _delete_embedding(self, post_id: int) -> None:
+        if self.rag_index is None:
+            return
+        try:
+            self.rag_index.delete_post(post_id)
+        except Exception as exc:
+            logger.warning("Post vector index delete failed for post_id=%s: %s", post_id, exc)
 
     def _build_embedding_hash(self, post: Post) -> str | None:
         if self.embedding_service is None:

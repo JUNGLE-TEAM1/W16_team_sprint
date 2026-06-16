@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import status
 
 from backend.app.core.errors import AppError
-from backend.app.repositories.embedding_repository import PostEmbeddingRepository
 from backend.app.schemas.ai import (
     RELATED_POST_LIMIT,
     RELATED_POST_MIN_SIMILARITY,
@@ -12,19 +11,20 @@ from backend.app.schemas.ai import (
     RelatedPostsResponse,
 )
 from backend.app.services.embedding_service import PostEmbeddingService
+from backend.app.services.langchain_rag_index import LangChainPostVectorIndex
 from backend.app.services.rag_summary_service import RagSummaryProvider
 
 
 class RagService:
     def __init__(
         self,
-        embeddings: PostEmbeddingRepository,
+        rag_index: LangChainPostVectorIndex,
         embedding_service: PostEmbeddingService,
         summary_provider: RagSummaryProvider | None = None,
         limit: int = RELATED_POST_LIMIT,
         min_similarity: float = RELATED_POST_MIN_SIMILARITY,
     ) -> None:
-        self.embeddings = embeddings
+        self.rag_index = rag_index
         self.embedding_service = embedding_service
         self.summary_provider = summary_provider
         self.limit = limit
@@ -37,7 +37,12 @@ class RagService:
             tags=payload.tags,
         )
         try:
-            query_embedding = self.embedding_service.embed(query_text)
+            rows = self.rag_index.find_related_posts(
+                query_text=query_text,
+                limit=self.limit,
+                min_similarity=self.min_similarity,
+                exclude_post_id=payload.exclude_post_id,
+            )
         except Exception as exc:
             raise AppError(
                 code="RAG_EMBEDDING_FAILED",
@@ -45,13 +50,6 @@ class RagService:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 details={},
             ) from exc
-
-        rows = self.embeddings.find_related_posts(
-            query_embedding=query_embedding,
-            limit=self.limit,
-            min_similarity=self.min_similarity,
-            exclude_post_id=payload.exclude_post_id,
-        )
         summaries: dict[int, str] = {}
         if self.summary_provider is not None and rows:
             try:

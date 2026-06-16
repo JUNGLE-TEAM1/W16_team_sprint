@@ -12,6 +12,7 @@ from backend.app.services.embedding_service import (
     OpenAIEmbeddingProvider,
     PostEmbeddingService,
 )
+from backend.app.services.langchain_rag_index import LangChainPostVectorIndex
 from backend.app.services.post_service import PostService
 from backend.app.services.rag_service import RagService
 from backend.app.services.rag_summary_service import OpenAIRagSummaryProvider, RagSummaryProvider
@@ -33,12 +34,14 @@ def get_post_service(
     tags = TagRepository(db)
     embeddings = PostEmbeddingRepository(db)
     embedding_service = PostEmbeddingService(embedding_provider)
+    rag_index = LangChainPostVectorIndex(db=db, embedding_provider=embedding_provider)
     return PostService(
         db=db,
         posts=posts,
         tags=tags,
         embeddings=embeddings,
         embedding_service=embedding_service,
+        rag_index=rag_index,
     )
 
 
@@ -53,10 +56,10 @@ def get_rag_service(
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     summary_provider: RagSummaryProvider = Depends(get_rag_summary_provider),
 ) -> RagService:
-    embeddings = PostEmbeddingRepository(db)
     embedding_service = PostEmbeddingService(embedding_provider)
+    rag_index = LangChainPostVectorIndex(db=db, embedding_provider=embedding_provider)
     return RagService(
-        embeddings=embeddings,
+        rag_index=rag_index,
         embedding_service=embedding_service,
         summary_provider=summary_provider,
     )
