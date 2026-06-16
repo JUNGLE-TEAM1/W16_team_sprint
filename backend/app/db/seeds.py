@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import settings
 from backend.app.core.embedding import embed_text, embedding_dimensions, embedding_signature
 from backend.app.core.security import hash_password
+from backend.app.db.vector import ensure_pgvector_schema, vector_literal
 from backend.app.models.post import Post
 from backend.app.models.post_embedding import PostEmbedding
 from backend.app.models.tag import Tag
@@ -80,6 +81,7 @@ def seed_support_cards(database_engine) -> None:
         return
 
     with Session(database_engine) as db:
+        ensure_pgvector_schema(db)
         admin_user = db.scalar(select(User).where(User.email == "admin@sprint.local"))
         if admin_user is None:
             seed_demo_users(database_engine)
@@ -378,10 +380,21 @@ def _ensure_post_embedding(db: Session, post: Post) -> None:
             )
         )
         db.flush()
+        _write_pgvector_embedding(db, post.id, vector)
         return
 
     embedding.source_text = indexed_source_text
     embedding.vector_json = json.dumps(vector)
+    _write_pgvector_embedding(db, post.id, vector)
+
+
+def _write_pgvector_embedding(db: Session, post_id: int, vector: list[float]) -> None:
+    if db.get_bind().dialect.name != "postgresql":
+        return
+    db.execute(
+        text("UPDATE post_embeddings SET embedding = CAST(:vector AS vector) WHERE post_id = :post_id"),
+        {"vector": vector_literal(vector), "post_id": post_id},
+    )
 
 
 def _indexed_source_text(source_text: str) -> str:

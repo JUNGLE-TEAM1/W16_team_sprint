@@ -167,12 +167,12 @@ RAG는 수원시 청년지원사업 API에서 적재한 지원 카드와 MCP/외
 -> 작성 폼의 AI 매칭 버튼
 -> POST /api/v1/rag/assist
 -> 입력값은 저장하지 않고 일회성 query embedding 생성
--> DB에 저장된 `data-bot` 수원시 청년정책 카드 벡터와 query 벡터를 cosine similarity로 비교
+-> DB의 `post_embeddings.embedding vector(1536)` 컬럼에서 query 벡터와 cosine similarity를 직접 비교
 -> 받을 수 있는 지원 후보, 조건 확인, 신청 체크리스트, 상담 경로 반환
 -> React 화면에 결과 표시
 ```
 
-현재 구현은 `post_embeddings.vector_json`에 저장된 `data-bot` 수원시 청년정책 카드 벡터와 사용자가 입력한 상담 문장의 query embedding을 같은 모델/차원으로 만든 뒤 cosine similarity로 후보 지원 카드를 찾습니다. MCP 서버의 `fetch_reference_materials` tool로 수원시 API/정책 참고자료를 가져오고, OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. 사용자가 입력한 매칭 요청은 `posts`나 `post_embeddings`에 저장하지 않으며, query embedding도 비교가 끝나면 버립니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서는 deterministic 1536차원 embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 지원 카드용 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
+현재 구현은 pgvector 확장을 사용합니다. `data-bot` 수원시 청년정책 카드 벡터는 `post_embeddings.embedding vector(1536)`에 저장되고, 사용자가 입력한 상담 문장의 query embedding은 저장하지 않은 채 SQL의 `ORDER BY pe.embedding <=> CAST(:query_vector AS vector)`로 바로 정렬합니다. `vector_json`은 재색인/디버깅용 백업 값으로만 유지합니다. MCP 서버의 `fetch_reference_materials` tool로 수원시 API/정책 참고자료를 가져오고, OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서는 deterministic 1536차원 embedding과 규칙 기반 요약 fallback을 사용합니다.
 
 ## OpenAI API 설정
 
@@ -197,7 +197,7 @@ SUWON_YOUTH_POLICY_API_PER_PAGE=100
 SUWON_YOUTH_POLICY_API_TIMEOUT_SECONDS=10
 ```
 
-`OPENAI_API_KEY`가 비어 있으면 1536차원 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 지원 카드와 query 모두 `OPENAI_EMBEDDING_MODEL=text-embedding-3-small`, `OPENAI_EMBEDDING_DIMENSIONS=1536` 기준으로 임베딩되고, `POST /api/v1/rag/assist`가 cosine similarity 기반 후보와 OpenAI Responses API 기반 LLM 추천을 함께 반환합니다. v1에서는 사용자 입력을 저장하지 않고 query embedding도 DB에 남기지 않습니다.
+`OPENAI_API_KEY`가 비어 있으면 1536차원 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 지원 카드와 query 모두 `OPENAI_EMBEDDING_MODEL=text-embedding-3-small`, `OPENAI_EMBEDDING_DIMENSIONS=1536` 기준으로 임베딩되고, `POST /api/v1/rag/assist`가 pgvector cosine similarity 기반 후보와 OpenAI Responses API 기반 LLM 추천을 함께 반환합니다. v1에서는 사용자 입력을 저장하지 않고 query embedding도 DB에 남기지 않습니다.
 
 기존에 64차원 로컬 벡터가 저장되어 있어도, 1536차원 기본 설정으로 바뀌면 RAG 실행 시 기존 카드 임베딩을 자동으로 다시 생성합니다.
 

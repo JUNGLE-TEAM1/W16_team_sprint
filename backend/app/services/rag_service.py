@@ -12,7 +12,6 @@ from backend.app.core.embedding import (
     EmbeddingError,
     active_embedding_model,
     active_embedding_provider,
-    cosine_similarity,
     embed_text,
     embedding_dimensions,
     embedding_signature,
@@ -44,6 +43,17 @@ class PostEmbeddingRepositoryPort(Protocol):
         pass
 
     def post_ids(self) -> set[int]:
+        pass
+
+    def count_support_vectors(self) -> int:
+        pass
+
+    def search_similar_support_cards(
+        self,
+        *,
+        query_vector: list[float],
+        limit: int,
+    ) -> list[tuple[float, PostEmbedding, Post]]:
         pass
 
 
@@ -95,26 +105,23 @@ class RagService:
                 status_code=status.HTTP_502_BAD_GATEWAY,
             ) from exc
 
-        current_embeddings = self._support_card_embeddings()
+        stored_vectors = self.embeddings.count_support_vectors()
         expected_dimensions = embedding_dimensions()
-        scored_matches = []
-        for embedding, post in current_embeddings:
-            stored_vector = self._vector_from_json(embedding.vector_json)
-            score = max(0.0, min(1.0, cosine_similarity(query_vector, stored_vector)))
-            scored_matches.append((score, post, embedding.source_text))
-
-        scored_matches.sort(key=lambda match: match[0], reverse=True)
+        scored_matches = self.embeddings.search_similar_support_cards(
+            query_vector=query_vector,
+            limit=payload.top_k,
+        )
         matches = [
             RagMatch(
                 post_id=post.id,
                 title=post.title,
                 excerpt=self._excerpt(post.content),
-                score=round(score, 3),
+                score=round(max(0.0, score), 3),
                 duplicate_risk=self._duplicate_risk(score),
                 summary=self._summary(post, score),
                 tags=post.tags,
             )
-            for score, post, _ in scored_matches[: payload.top_k]
+            for score, _, post in scored_matches
             if score > 0
         ]
 
@@ -143,7 +150,7 @@ class RagService:
             llm_provider="openai" if llm_used else "none",
             llm_model=settings.openai_llm_model if llm_used else "rule-fallback",
             llm_used=llm_used,
-            stored_vectors=len(scored_matches),
+            stored_vectors=stored_vectors,
             duplicate_warning=duplicate_warning,
             mvp_highlight=self._mvp_highlight(query_text=query_text, matches=enriched_matches),
             recommendation=recommendation,
@@ -415,15 +422,6 @@ class RagService:
 
     def _indexed_source_text(self, post: Post) -> str:
         return f"__embedding_index__:{embedding_signature()}\n{self._source_text(post)}"
-
-    def _vector_from_json(self, vector_json: str) -> list[float]:
-        try:
-            vector = json.loads(vector_json)
-        except json.JSONDecodeError:
-            return []
-        if not isinstance(vector, list):
-            return []
-        return [float(component) for component in vector if isinstance(component, int | float)]
 
     def _mvp_highlight(self, *, query_text: str, matches: list[RagMatch]) -> RagMvpHighlight | None:
         if not matches:
