@@ -39,7 +39,7 @@ class RelatedPostItem(BaseModel):
     content_preview: str
     tags: list[str]
     similarity: float
-    summary: None = None
+    summary: str | None = None
 
 
 class RelatedPostsResponse(BaseModel):

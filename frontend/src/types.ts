@@ -90,7 +90,7 @@ export interface RelatedPost {
   content_preview: string;
   tags: string[];
   similarity: number;
-  summary: null;
+  summary: string | null;
 }
 
 export interface RelatedPostsResponse {

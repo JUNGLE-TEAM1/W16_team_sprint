@@ -37,6 +37,8 @@ class Settings:
     session_cookie_secure: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    openai_summary_model: str = os.getenv("OPENAI_SUMMARY_MODEL", "gpt-5.4-nano")
+    openai_summary_max_output_tokens: int = _int_env("OPENAI_SUMMARY_MAX_OUTPUT_TOKENS", 700)
     cors_origins: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:

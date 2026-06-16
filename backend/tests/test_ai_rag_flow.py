@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from backend.app.api.dependencies import get_embedding_provider
+from backend.app.api.dependencies import get_embedding_provider, get_rag_summary_provider
 from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.main import app
@@ -13,12 +13,35 @@ class FailingEmbeddingProvider:
         raise RuntimeError("query embedding failed")
 
 
+class NoopSummaryProvider:
+    def summarize(self, payload, related_posts):  # noqa: ANN001
+        return {}
+
+
+class MockSummaryProvider:
+    def summarize(self, payload, related_posts):  # noqa: ANN001
+        return {
+            row.post_id: f"{row.title}와 작성 중인 글은 인증 흐름이라는 점에서 관련됩니다. 기존 글은 {row.content_preview} 내용을 다룹니다."
+            for row in related_posts
+        }
+
+
+class FailingSummaryProvider:
+    def summarize(self, payload, related_posts):  # noqa: ANN001
+        raise RuntimeError("summary failed")
+
+
 def setup_function() -> None:
     app.dependency_overrides.clear()
     with engine.begin() as connection:
         connection.execute(text("DROP TABLE IF EXISTS refresh_tokens CASCADE"))
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+
+def use_mock_rag_dependencies(summary_provider=None) -> None:  # noqa: ANN001
+    app.dependency_overrides[get_embedding_provider] = lambda: MockEmbeddingProvider()
+    app.dependency_overrides[get_rag_summary_provider] = lambda: summary_provider or NoopSummaryProvider()
 
 
 def register_and_login(client: TestClient) -> None:
@@ -53,7 +76,7 @@ def create_post(client: TestClient, title: str, content: str, tags: list[str] | 
 
 
 def test_related_posts_requires_session() -> None:
-    app.dependency_overrides[get_embedding_provider] = lambda: MockEmbeddingProvider()
+    use_mock_rag_dependencies()
     client = TestClient(app)
 
     response = client.post(
@@ -69,7 +92,7 @@ def test_related_posts_requires_session() -> None:
 
 
 def test_related_posts_returns_empty_items_when_no_embeddings_exist() -> None:
-    app.dependency_overrides[get_embedding_provider] = lambda: MockEmbeddingProvider()
+    use_mock_rag_dependencies()
     client = TestClient(app)
     register_and_login(client)
 
@@ -87,7 +110,7 @@ def test_related_posts_returns_empty_items_when_no_embeddings_exist() -> None:
 
 
 def test_related_posts_returns_top_matches_and_supports_exclude_post_id() -> None:
-    app.dependency_overrides[get_embedding_provider] = lambda: MockEmbeddingProvider()
+    use_mock_rag_dependencies()
     client = TestClient(app)
     register_and_login(client)
 
@@ -136,7 +159,7 @@ def test_related_posts_returns_top_matches_and_supports_exclude_post_id() -> Non
 
 
 def test_related_posts_rejects_too_short_query() -> None:
-    app.dependency_overrides[get_embedding_provider] = lambda: MockEmbeddingProvider()
+    use_mock_rag_dependencies()
     client = TestClient(app)
     register_and_login(client)
 
@@ -154,6 +177,7 @@ def test_related_posts_rejects_too_short_query() -> None:
 
 def test_related_posts_returns_rag_embedding_failed_when_query_embedding_fails() -> None:
     app.dependency_overrides[get_embedding_provider] = lambda: FailingEmbeddingProvider()
+    app.dependency_overrides[get_rag_summary_provider] = lambda: NoopSummaryProvider()
     client = TestClient(app)
     register_and_login(client)
 
@@ -174,3 +198,57 @@ def test_related_posts_returns_rag_embedding_failed_when_query_embedding_fails()
             "details": {},
         }
     }
+
+
+def test_related_posts_returns_llm_summaries_when_summary_provider_succeeds() -> None:
+    use_mock_rag_dependencies(MockSummaryProvider())
+    client = TestClient(app)
+    register_and_login(client)
+
+    post_id = create_post(
+        client,
+        title="FastAPI 세션 인증 흐름",
+        content="Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
+        tags=["fastapi", "auth"],
+    )
+
+    response = client.post(
+        "/api/v1/ai/rag/related-posts",
+        json={
+            "title": "FastAPI 세션 인증 흐름",
+            "content": "Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
+            "tags": ["fastapi", "auth"],
+        },
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["post_id"] == post_id
+    assert "인증 흐름" in item["summary"]
+
+
+def test_related_posts_keeps_items_when_summary_provider_fails() -> None:
+    use_mock_rag_dependencies(FailingSummaryProvider())
+    client = TestClient(app)
+    register_and_login(client)
+
+    post_id = create_post(
+        client,
+        title="FastAPI 세션 인증 흐름",
+        content="Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
+        tags=["fastapi", "auth"],
+    )
+
+    response = client.post(
+        "/api/v1/ai/rag/related-posts",
+        json={
+            "title": "FastAPI 세션 인증 흐름",
+            "content": "Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
+            "tags": ["fastapi", "auth"],
+        },
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["post_id"] == post_id
+    assert item["summary"] is None

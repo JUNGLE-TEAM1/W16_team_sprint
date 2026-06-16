@@ -19,6 +19,7 @@ class RelatedPostRow:
     post_id: int
     title: str
     content_preview: str
+    content_for_summary: str
     tags: list[str]
     similarity: float
 
@@ -117,6 +118,7 @@ class PostEmbeddingRepository:
                 candidates.post_id,
                 candidates.title,
                 LEFT(candidates.content, :preview_length) AS content_preview,
+                LEFT(candidates.content, :summary_length) AS content_for_summary,
                 candidates.similarity,
                 COALESCE(
                     ARRAY_AGG(tags.name ORDER BY tags.name)
@@ -144,6 +146,7 @@ class PostEmbeddingRepository:
                 "limit": limit,
                 "min_similarity": min_similarity,
                 "preview_length": 240,
+                "summary_length": 1200,
                 "query_embedding": self._to_vector_literal(query_embedding),
             },
         ).mappings()
@@ -152,6 +155,7 @@ class PostEmbeddingRepository:
                 post_id=int(row["post_id"]),
                 title=str(row["title"]),
                 content_preview=str(row["content_preview"]),
+                content_for_summary=str(row["content_for_summary"]),
                 tags=list(row["tags"] or []),
                 similarity=round(float(row["similarity"]), 6),
             )

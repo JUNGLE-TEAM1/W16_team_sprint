@@ -12,6 +12,7 @@ from backend.app.schemas.ai import (
     RelatedPostsResponse,
 )
 from backend.app.services.embedding_service import PostEmbeddingService
+from backend.app.services.rag_summary_service import RagSummaryProvider
 
 
 class RagService:
@@ -19,11 +20,13 @@ class RagService:
         self,
         embeddings: PostEmbeddingRepository,
         embedding_service: PostEmbeddingService,
+        summary_provider: RagSummaryProvider | None = None,
         limit: int = RELATED_POST_LIMIT,
         min_similarity: float = RELATED_POST_MIN_SIMILARITY,
     ) -> None:
         self.embeddings = embeddings
         self.embedding_service = embedding_service
+        self.summary_provider = summary_provider
         self.limit = limit
         self.min_similarity = min_similarity
 
@@ -49,6 +52,13 @@ class RagService:
             min_similarity=self.min_similarity,
             exclude_post_id=payload.exclude_post_id,
         )
+        summaries: dict[int, str] = {}
+        if self.summary_provider is not None and rows:
+            try:
+                summaries = self.summary_provider.summarize(payload, rows)
+            except Exception:
+                summaries = {}
+
         return RelatedPostsResponse(
             items=[
                 RelatedPostItem(
@@ -57,7 +67,7 @@ class RagService:
                     content_preview=row.content_preview,
                     tags=row.tags,
                     similarity=row.similarity,
-                    summary=None,
+                    summary=summaries.get(row.post_id),
                 )
                 for row in rows
             ]

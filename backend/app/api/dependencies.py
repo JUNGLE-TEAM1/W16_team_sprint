@@ -7,13 +7,22 @@ from backend.app.repositories.embedding_repository import PostEmbeddingRepositor
 from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
 from backend.app.services.comment_service import CommentService
-from backend.app.services.embedding_service import EmbeddingProvider, OpenAIEmbeddingProvider, PostEmbeddingService
+from backend.app.services.embedding_service import (
+    EmbeddingProvider,
+    OpenAIEmbeddingProvider,
+    PostEmbeddingService,
+)
 from backend.app.services.post_service import PostService
 from backend.app.services.rag_service import RagService
+from backend.app.services.rag_summary_service import OpenAIRagSummaryProvider, RagSummaryProvider
 
 
 def get_embedding_provider() -> EmbeddingProvider:
     return OpenAIEmbeddingProvider()
+
+
+def get_rag_summary_provider() -> RagSummaryProvider:
+    return OpenAIRagSummaryProvider()
 
 
 def get_post_service(
@@ -42,7 +51,12 @@ def get_comment_service(db: Session = Depends(get_db)) -> CommentService:
 def get_rag_service(
     db: Session = Depends(get_db),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
+    summary_provider: RagSummaryProvider = Depends(get_rag_summary_provider),
 ) -> RagService:
     embeddings = PostEmbeddingRepository(db)
     embedding_service = PostEmbeddingService(embedding_provider)
-    return RagService(embeddings=embeddings, embedding_service=embedding_service)
+    return RagService(
+        embeddings=embeddings,
+        embedding_service=embedding_service,
+        summary_provider=summary_provider,
+    )
