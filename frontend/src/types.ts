@@ -55,6 +55,13 @@ export type RagMatch = {
   tags: Tag[];
 };
 
+export type RagReference = {
+  title: string;
+  url: string;
+  source: string;
+  excerpt: string;
+};
+
 export type RagAssistResponse = {
   embedding_dimensions: number;
   embedding_provider: string;
@@ -66,6 +73,19 @@ export type RagAssistResponse = {
   duplicate_warning: boolean;
   recommendation: string;
   matches: RagMatch[];
+  references: RagReference[];
+};
+
+export type AgentWritingAssistResponse = {
+  provider: string;
+  model: string;
+  suggested_title: string;
+  suggested_content: string;
+  suggested_tag_names: string[];
+  outline: string[];
+  next_questions: string[];
+  agent_steps: string[];
+  confidence: number;
 };
 
 export type ApiError = {

@@ -1,7 +1,15 @@
 import { FormEvent, useState } from "react";
 
-import { deletePost, runRagAssist, savePost } from "../services/boardApi";
-import type { DraftPost, Post, PostFilters, PostMeta, RagAssistResponse, TokenResponse } from "../types";
+import { deletePost, runRagAssist, runWritingAgent, savePost } from "../services/boardApi";
+import type {
+  AgentWritingAssistResponse,
+  DraftPost,
+  Post,
+  PostFilters,
+  PostMeta,
+  RagAssistResponse,
+  TokenResponse,
+} from "../types";
 
 const EMPTY_DRAFT: DraftPost = { title: "", content: "", tagNames: "" };
 
@@ -27,9 +35,32 @@ export function useWriter({
   const [showComposer, setShowComposer] = useState(false);
   const [draftPost, setDraftPost] = useState<DraftPost>(EMPTY_DRAFT);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [agentResult, setAgentResult] = useState<AgentWritingAssistResponse | null>(null);
   const [ragResult, setRagResult] = useState<RagAssistResponse | null>(null);
   const [savingPost, setSavingPost] = useState(false);
+  const [runningAgent, setRunningAgent] = useState(false);
   const [runningRag, setRunningRag] = useState(false);
+
+  async function handleWritingAgent() {
+    setRunningAgent(true);
+    setError(null);
+    try {
+      setAgentResult(await runWritingAgent(draftPost));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Agent 추천을 완료하지 못했습니다.");
+    } finally {
+      setRunningAgent(false);
+    }
+  }
+
+  function applyAgentSuggestion() {
+    if (!agentResult) return;
+    setDraftPost({
+      title: agentResult.suggested_title,
+      content: agentResult.suggested_content,
+      tagNames: agentResult.suggested_tag_names.join(", "),
+    });
+  }
 
   async function handleRagAssist() {
     if (!draftPost.title.trim() && !draftPost.content.trim()) {
@@ -62,6 +93,7 @@ export function useWriter({
       const savedPost = await savePost(draftPost, session.access_token, editingPostId);
       setDraftPost(EMPTY_DRAFT);
       setEditingPostId(null);
+      setAgentResult(null);
       setRagResult(null);
       setShowComposer(false);
       await loadTags();
@@ -76,6 +108,7 @@ export function useWriter({
   function startEdit(post: Post) {
     setEditingPostId(post.id);
     setShowComposer(true);
+    setAgentResult(null);
     setRagResult(null);
     setDraftPost({
       title: post.title,
@@ -87,6 +120,7 @@ export function useWriter({
   function cancelEdit() {
     setEditingPostId(null);
     setShowComposer(false);
+    setAgentResult(null);
     setRagResult(null);
     setDraftPost(EMPTY_DRAFT);
   }
@@ -106,6 +140,7 @@ export function useWriter({
     try {
       await deletePost(postId, session.access_token);
       setEditingPostId(null);
+      setAgentResult(null);
       setRagResult(null);
       setDraftPost(EMPTY_DRAFT);
       await loadTags();
@@ -116,13 +151,17 @@ export function useWriter({
   }
 
   return {
+    agentResult,
+    applyAgentSuggestion,
     cancelEdit,
     draftPost,
     editingPostId,
     handleDeletePost,
     handleRagAssist,
     handleSavePost,
+    handleWritingAgent,
     ragResult,
+    runningAgent,
     runningRag,
     savingPost,
     setDraftPost,

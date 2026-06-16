@@ -2,6 +2,13 @@ import os
 from dataclasses import dataclass
 
 
+def env_bool(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str = os.getenv(
@@ -29,6 +36,10 @@ class Settings:
     openai_llm_model: str = os.getenv("OPENAI_LLM_MODEL", "gpt-4o-mini")
     openai_llm_max_output_tokens: int = int(os.getenv("OPENAI_LLM_MAX_OUTPUT_TOKENS", "700"))
     openai_timeout_seconds: float = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "20"))
+    reference_fetch_enabled: bool = env_bool("REFERENCE_FETCH_ENABLED", True)
+    reference_api_url: str = os.getenv("REFERENCE_API_URL", "").strip()
+    reference_max_items: int = int(os.getenv("REFERENCE_MAX_ITEMS", "3"))
+    reference_timeout_seconds: float = float(os.getenv("REFERENCE_TIMEOUT_SECONDS", "2.5"))
 
 
 settings = Settings()

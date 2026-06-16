@@ -8,6 +8,7 @@ from backend.app.repositories.comment_repository import CommentRepository
 from backend.app.repositories.post_embedding_repository import PostEmbeddingRepository
 from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
+from backend.app.services.agent_service import AgentService
 from backend.app.services.comment_service import CommentService
 from backend.app.services.post_service import PostService
 from backend.app.services.rag_service import RagService
@@ -53,6 +54,10 @@ def get_tag_service(tags: Annotated[TagRepository, Depends(get_tag_repository)])
     return TagService(tags=tags)
 
 
+def get_agent_service() -> AgentService:
+    return AgentService()
+
+
 def get_rag_service(
     posts: Annotated[PostRepository, Depends(get_post_repository)],
     embeddings: Annotated[PostEmbeddingRepository, Depends(get_post_embedding_repository)],
@@ -64,4 +69,5 @@ def get_rag_service(
 PostServiceDependency = Annotated[PostService, Depends(get_post_service)]
 CommentServiceDependency = Annotated[CommentService, Depends(get_comment_service)]
 TagServiceDependency = Annotated[TagService, Depends(get_tag_service)]
+AgentServiceDependency = Annotated[AgentService, Depends(get_agent_service)]
 RagServiceDependency = Annotated[RagService, Depends(get_rag_service)]

@@ -147,7 +147,7 @@ curl http://127.0.0.1:8000/api/v1/posts/1
 -> React 화면에 결과 표시
 ```
 
-현재 구현은 embedding으로 후보 글을 찾은 뒤 OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서만 deterministic embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
+현재 구현은 embedding으로 후보 글을 찾은 뒤 MCP 서버의 `fetch_reference_materials` tool로 공식 문서/외부 API 참고자료를 가져오고, OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서만 deterministic embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
 
 ## OpenAI API 설정
 
@@ -162,8 +162,20 @@ OPENAI_EMBEDDING_DIMENSIONS=1536
 OPENAI_LLM_MODEL=gpt-4o-mini
 OPENAI_LLM_MAX_OUTPUT_TOKENS=700
 OPENAI_TIMEOUT_SECONDS=20
+REFERENCE_FETCH_ENABLED=true
+REFERENCE_API_URL=
+REFERENCE_MAX_ITEMS=3
+REFERENCE_TIMEOUT_SECONDS=2.5
 ```
 
 `OPENAI_API_KEY`가 비어 있으면 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 `POST /api/v1/rag/assist`가 OpenAI embedding API와 OpenAI Responses API 기반 LLM 추천을 사용합니다.
 
 기존에 64차원 로컬 벡터가 저장되어 있어도, OpenAI 1536차원 설정으로 바뀌면 RAG 실행 시 기존 게시글 임베딩을 자동으로 다시 생성합니다.
+
+참고자료 수집은 `REFERENCE_FETCH_ENABLED=true`일 때 동작합니다. RAG 서비스가 stdio MCP client로 `backend.app.mcp.reference_server`를 실행하고, MCP tool이 참고자료를 반환합니다. `REFERENCE_API_URL`이 있으면 `q`, `limit` 쿼리로 외부 API를 먼저 호출하고, 없거나 부족하면 FastAPI, React, OpenAI, PostgreSQL, SQLAlchemy, Vite 공식 문서 후보에서 초안과 유사 글 키워드에 맞는 페이지를 가져옵니다.
+
+MCP 서버만 따로 확인하려면 아래처럼 실행할 수 있습니다.
+
+```bash
+python -m backend.app.mcp.reference_server
+```

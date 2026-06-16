@@ -7,6 +7,7 @@ class RagAssistRequest(BaseModel):
     title: str = Field(default="", max_length=120)
     content: str = Field(default="", max_length=5000)
     top_k: int = Field(default=3, ge=1, le=10)
+    include_references: bool = True
 
 
 class RagMatch(BaseModel):
@@ -17,6 +18,13 @@ class RagMatch(BaseModel):
     duplicate_risk: str
     summary: str
     tags: list[TagRead]
+
+
+class RagReference(BaseModel):
+    title: str
+    url: str
+    source: str
+    excerpt: str
 
 
 class RagAssistResponse(BaseModel):
@@ -30,3 +38,4 @@ class RagAssistResponse(BaseModel):
     duplicate_warning: bool
     recommendation: str
     matches: list[RagMatch]
+    references: list[RagReference]

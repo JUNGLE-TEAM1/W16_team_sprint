@@ -1,6 +1,9 @@
 fastapi==0.115.6
 httpx==0.28.1
+mcp==1.27.2
 psycopg[binary]==3.2.3
+sse-starlette==2.2.1
+starlette==0.41.3
 sqlalchemy==2.0.36
 uvicorn[standard]==0.34.0
 pytest==8.3.4

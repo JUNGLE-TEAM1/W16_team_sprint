@@ -1,7 +1,7 @@
 import type { FormEventHandler } from "react";
-import { Plus, Sparkles, Tag, X } from "lucide-react";
+import { Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
 
-import type { CurrentUser, DraftPost, RagAssistResponse } from "../types";
+import type { AgentWritingAssistResponse, CurrentUser, DraftPost, RagAssistResponse } from "../types";
 import { riskText } from "../utils";
 
 type WriteColumnProps = {
@@ -9,12 +9,16 @@ type WriteColumnProps = {
   editingPostId: number | null;
   currentUser: CurrentUser | null;
   draftPost: DraftPost;
+  agentResult: AgentWritingAssistResponse | null;
   ragResult: RagAssistResponse | null;
+  runningAgent: boolean;
   runningRag: boolean;
   savingPost: boolean;
   onOpenComposer: () => void;
   onCancelEdit: () => void;
   onDraftPostChange: (draftPost: DraftPost) => void;
+  onWritingAgent: () => void;
+  onApplyAgentSuggestion: () => void;
   onRagAssist: () => void;
   onSavePost: FormEventHandler<HTMLFormElement>;
 };
@@ -24,12 +28,16 @@ export function WriteColumn({
   editingPostId,
   currentUser,
   draftPost,
+  agentResult,
   ragResult,
+  runningAgent,
   runningRag,
   savingPost,
   onOpenComposer,
   onCancelEdit,
   onDraftPostChange,
+  onWritingAgent,
+  onApplyAgentSuggestion,
   onRagAssist,
   onSavePost,
 }: WriteColumnProps) {
@@ -84,6 +92,10 @@ export function WriteColumn({
               />
             </label>
             <div className="buttonRow">
+              <button className="outlineButton" type="button" onClick={onWritingAgent} disabled={runningAgent}>
+                <Bot size={15} />
+                {runningAgent ? "추천 중" : "Agent 추천"}
+              </button>
               <button className="outlineButton" type="button" onClick={onRagAssist} disabled={runningRag}>
                 <Sparkles size={15} />
                 {runningRag ? "검사 중" : "RAG 검사"}
@@ -95,6 +107,34 @@ export function WriteColumn({
             </div>
             {!currentUser && <p className="panelHint">로그인 후 발행할 수 있습니다.</p>}
           </form>
+        </section>
+      )}
+
+      {agentResult && (
+        <section className="agentPanel">
+          <div className="panelHeader">
+            <div>
+              <span className="kicker">Agent</span>
+              <strong>초안과 태그 추천</strong>
+            </div>
+            <span className="softPill">{Math.round(agentResult.confidence * 100)}%</span>
+          </div>
+          <strong className="agentTitle">{agentResult.suggested_title}</strong>
+          <p>{agentResult.suggested_content}</p>
+          <div className="agentTags">
+            {agentResult.suggested_tag_names.map((tagName) => (
+              <span key={tagName}>#{tagName}</span>
+            ))}
+          </div>
+          <div className="agentList">
+            {agentResult.outline.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+          <button className="wideGhostButton" type="button" onClick={onApplyAgentSuggestion}>
+            <Check size={15} />
+            제안 적용
+          </button>
         </section>
       )}
 
@@ -127,6 +167,21 @@ export function WriteColumn({
             ))}
             {ragResult.matches.length === 0 && <p className="muted">가까운 글이 없습니다.</p>}
           </div>
+          {ragResult.references.length > 0 && (
+            <div className="ragReferences">
+              <span className="kicker">References</span>
+              {ragResult.references.map((reference) => (
+                <a href={reference.url} key={reference.url} target="_blank" rel="noreferrer">
+                  <span>
+                    <strong>{reference.title}</strong>
+                    <small>{reference.source}</small>
+                  </span>
+                  <ExternalLink size={14} />
+                  <p>{reference.excerpt}</p>
+                </a>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </aside>

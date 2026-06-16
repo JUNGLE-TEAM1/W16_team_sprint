@@ -94,10 +94,14 @@ def test_rag_assist_uses_openai_llm_when_api_key_is_configured(monkeypatch) -> N
             openai_llm_model="gpt-test",
             openai_llm_max_output_tokens=300,
             openai_timeout_seconds=1,
+            reference_fetch_enabled=False,
+            reference_api_url="",
+            reference_max_items=3,
+            reference_timeout_seconds=1,
         ),
     )
 
-    def fake_request_llm_assist(self, *, query_text, matches, duplicate_warning):
+    def fake_request_llm_assist(self, *, query_text, matches, references, duplicate_warning):
         assert "LLM" in query_text
         assert matches
         return {
@@ -129,3 +133,53 @@ def test_rag_assist_uses_openai_llm_when_api_key_is_configured(monkeypatch) -> N
         "LLM checked the similar RAG post and suggested a clearer angle for the new draft."
     )
     assert body["matches"][0]["summary"] == "LLM-generated summary based on the candidate post."
+
+
+def test_rag_assist_returns_reference_materials(monkeypatch) -> None:
+    headers = auth_headers()
+    created = client.post(
+        "/api/v1/posts",
+        headers=headers,
+        json={
+            "title": "FastAPI authentication reference",
+            "content": "JWT Bearer token handling should follow official FastAPI guidance.",
+            "tag_names": ["fastapi", "auth"],
+        },
+    )
+    assert created.status_code == 201
+
+    from backend.app.schemas.rag import RagReference
+    from backend.app.services import rag_service
+
+    def fake_fetch_reference_materials(*, query_text, matches):
+        assert "FastAPI" in query_text
+        assert matches
+        return [
+            RagReference(
+                title="FastAPI security tutorial",
+                url="https://fastapi.tiangolo.com/tutorial/security/",
+                source="FastAPI docs",
+                excerpt="Official FastAPI security reference.",
+            )
+        ]
+
+    monkeypatch.setattr(rag_service, "fetch_reference_materials", fake_fetch_reference_materials)
+
+    response = client.post(
+        "/api/v1/rag/assist",
+        json={
+            "title": "FastAPI JWT 401",
+            "content": "Check Bearer token auth with official docs.",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["references"] == [
+        {
+            "title": "FastAPI security tutorial",
+            "url": "https://fastapi.tiangolo.com/tutorial/security/",
+            "source": "FastAPI docs",
+            "excerpt": "Official FastAPI security reference.",
+        }
+    ]

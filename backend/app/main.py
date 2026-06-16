@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.v1.agent import router as agent_router
 from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.comments import router as comments_router
 from backend.app.api.v1.posts import router as posts_router
@@ -47,6 +48,7 @@ def create_app(database_engine=engine) -> FastAPI:
     app.include_router(comments_router, prefix="/api/v1")
     app.include_router(tags_router, prefix="/api/v1")
     app.include_router(rag_router, prefix="/api/v1")
+    app.include_router(agent_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(security_router, prefix="/api/v1")
     return app

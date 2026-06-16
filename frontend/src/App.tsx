@@ -68,12 +68,16 @@ export function App() {
           editingPostId={board.editingPostId}
           currentUser={board.currentUser}
           draftPost={board.draftPost}
+          agentResult={board.agentResult}
           ragResult={board.ragResult}
+          runningAgent={board.runningAgent}
           runningRag={board.runningRag}
           savingPost={board.savingPost}
           onOpenComposer={() => board.setShowComposer(true)}
           onCancelEdit={board.cancelEdit}
           onDraftPostChange={board.setDraftPost}
+          onWritingAgent={() => void board.handleWritingAgent()}
+          onApplyAgentSuggestion={board.applyAgentSuggestion}
           onRagAssist={() => void board.handleRagAssist()}
           onSavePost={(event) => void board.handleSavePost(event)}
         />

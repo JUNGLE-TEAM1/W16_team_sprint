@@ -4,6 +4,7 @@ import type {
   AuthMode,
   Comment,
   CurrentUser,
+  AgentWritingAssistResponse,
   DraftPost,
   Post,
   PostFilters,
@@ -55,6 +56,18 @@ export function runRagAssist(draftPost: DraftPost) {
       title: draftPost.title,
       content: draftPost.content,
       top_k: 3,
+      include_references: true,
+    }),
+  });
+}
+
+export function runWritingAgent(draftPost: DraftPost) {
+  return request<AgentWritingAssistResponse>("/api/v1/agent/writing-assist", {
+    method: "POST",
+    body: JSON.stringify({
+      title: draftPost.title,
+      content: draftPost.content,
+      tag_names: parseTags(draftPost.tagNames),
     }),
   });
 }

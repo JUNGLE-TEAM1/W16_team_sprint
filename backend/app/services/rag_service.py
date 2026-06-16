@@ -19,7 +19,8 @@ from backend.app.core.embedding import (
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
 from backend.app.models.post_embedding import PostEmbedding
-from backend.app.schemas.rag import RagAssistRequest, RagAssistResponse, RagMatch
+from backend.app.schemas.rag import RagAssistRequest, RagAssistResponse, RagMatch, RagReference
+from backend.app.services.reference_service import fetch_reference_materials
 
 
 class PostRepositoryPort(Protocol):
@@ -122,9 +123,15 @@ class RagService:
         ]
 
         duplicate_warning = any(match.score >= 0.58 for match in matches)
+        references = (
+            fetch_reference_materials(query_text=query_text, matches=matches)
+            if payload.include_references
+            else []
+        )
         recommendation, enriched_matches, llm_used = self._assist_with_llm(
             query_text=query_text,
             matches=matches,
+            references=references,
             duplicate_warning=duplicate_warning,
         )
 
@@ -141,6 +148,7 @@ class RagService:
             duplicate_warning=duplicate_warning,
             recommendation=recommendation,
             matches=enriched_matches,
+            references=references,
         )
 
     def _ensure_indexed(self) -> None:
@@ -167,6 +175,7 @@ class RagService:
         *,
         query_text: str,
         matches: list[RagMatch],
+        references: list[RagReference],
         duplicate_warning: bool,
     ) -> tuple[str, list[RagMatch], bool]:
         if not settings.openai_api_key:
@@ -176,6 +185,7 @@ class RagService:
             llm_payload = self._request_llm_assist(
                 query_text=query_text,
                 matches=matches,
+                references=references,
                 duplicate_warning=duplicate_warning,
             )
         except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -205,6 +215,7 @@ class RagService:
         *,
         query_text: str,
         matches: list[RagMatch],
+        references: list[RagReference],
         duplicate_warning: bool,
     ) -> dict[str, Any]:
         endpoint = f"{settings.openai_base_url.rstrip('/')}/responses"
@@ -215,7 +226,7 @@ class RagService:
                     "role": "system",
                     "content": (
                         "너는 게시판 작성 보조 RAG 어시스턴트다. "
-                        "사용자의 초안과 제공된 유사 게시글 후보만 근거로 한국어 추천을 작성한다. "
+                        "사용자의 초안, 제공된 유사 게시글 후보, 참고자료만 근거로 한국어 추천을 작성한다. "
                         "새 사실을 지어내지 말고 JSON만 반환한다."
                     ),
                 },
@@ -224,6 +235,7 @@ class RagService:
                     "content": self._llm_prompt(
                         query_text=query_text,
                         matches=matches,
+                        references=references,
                         duplicate_warning=duplicate_warning,
                     ),
                 },
@@ -249,6 +261,7 @@ class RagService:
         *,
         query_text: str,
         matches: list[RagMatch],
+        references: list[RagReference],
         duplicate_warning: bool,
     ) -> str:
         match_lines = []
@@ -279,6 +292,15 @@ class RagService:
                 "duplicate_warning": duplicate_warning,
                 "draft": query_text,
                 "matches": match_lines,
+                "references": [
+                    {
+                        "title": reference.title,
+                        "url": reference.url,
+                        "source": reference.source,
+                        "excerpt": reference.excerpt,
+                    }
+                    for reference in references
+                ],
             },
             ensure_ascii=False,
         )
