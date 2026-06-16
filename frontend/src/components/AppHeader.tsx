@@ -21,10 +21,10 @@ export function AppHeader({
         <button className="plainIcon" type="button" aria-label="메뉴">
           <Menu size={25} />
         </button>
-        <span className="wordmark">sprint</span>
+        <span className="wordmark">lifematch</span>
       </div>
 
-      <div className="pageTitle">스프린트 나우</div>
+      <div className="pageTitle">AI 생활지원 매칭</div>
 
       <div className="headerActions">
         <button className="plainIcon" type="button" onClick={onRefresh} aria-label="새로고침">
@@ -37,7 +37,7 @@ export function AppHeader({
           </button>
         ) : (
           <button className="outlineButton" type="button" onClick={onToggleAuthPanel}>
-            시작하기
+            상담 시작
           </button>
         )}
       </div>

@@ -34,13 +34,14 @@ export function HeroSection({
     <section className="hero">
       <div className="heroCopy">
         <h1>
-          글이 흐름이 되는 공간,
+          내 상황에 맞는 지원을 찾는,
           <br />
-          스프린트
+          AI 생활지원 매칭 보드
         </h1>
-        <p>스프린트에 담긴 구현 기록을 감상해 보세요.</p>
-        <p>그리고 다시 꺼내 보세요.</p>
-        <p>회의 전에 간직하고 있던 질문과 결정을.</p>
+        <p>내 상황을 입력하면 공공데이터 지원 카드를 찾아줍니다.</p>
+        <p>입력 내용은 저장하지 않고 일회성 매칭에만 사용합니다.</p>
+        <p>복지정책, 청년지원, 공공시설을 한 화면에서 비교하세요.</p>
+        <p>조건 확인과 신청 체크리스트까지 빠르게 정리합니다.</p>
       </div>
 
       <aside className="heroSide">
@@ -50,7 +51,7 @@ export function HeroSection({
             <div>
               <strong>{currentUser.email}</strong>
               <span>
-                {currentUser.role} · {postMeta.total} posts
+                {currentUser.role} · {postMeta.total} cards
               </span>
             </div>
           </section>
@@ -101,7 +102,7 @@ export function HeroSection({
             ) : (
               <button className="startCard" type="button" onClick={onShowAuthPanel}>
                 <PenLine size={19} />
-                <span>글을 쓰려면 로그인</span>
+                <span>상담하려면 로그인</span>
               </button>
             )}
           </section>

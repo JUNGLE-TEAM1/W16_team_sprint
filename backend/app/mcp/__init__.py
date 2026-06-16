@@ -1,1 +1,1 @@
-"""MCP servers and helpers for Sprint RAG integrations."""
+"""MCP servers and helpers for life-support RAG integrations."""

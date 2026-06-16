@@ -7,7 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from backend.app.core.config import settings
 from backend.app.mcp.reference_fetcher import fetch_reference_payloads
 
-mcp = FastMCP("Sprint Reference Materials")
+mcp = FastMCP("Life Support Reference Materials")
 
 
 @mcp.tool()
@@ -16,7 +16,7 @@ def fetch_reference_materials(
     matches: list[dict[str, Any]],
     reference_urls: list[str] | None = None,
 ) -> list[dict[str, str]]:
-    """Fetch official documentation and external API references for a RAG draft."""
+    """Fetch public-data and policy references for a life-support matching case."""
     return fetch_reference_payloads(
         query_text=query_text,
         matches=matches,

@@ -6,8 +6,8 @@ from backend.app.schemas.tag import TagRead
 class RagAssistRequest(BaseModel):
     title: str = Field(default="", max_length=120)
     content: str = Field(default="", max_length=5000)
-    top_k: int = Field(default=3, ge=1, le=10)
-    include_references: bool = True
+    top_k: int = Field(default=5, ge=1, le=10)
+    include_references: bool = False
     reference_urls: list[str] = Field(default_factory=list, max_length=5)
 
 

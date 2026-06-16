@@ -89,7 +89,7 @@ def test_post_service_uses_injected_repository_and_unit_of_work() -> None:
     assert post.user_id == 1
     assert post.author_name == "unit@sprint.local"
     assert repository.posts == [post]
-    assert embeddings.embeddings[0].post_id == 1
+    assert embeddings.embeddings == []
     assert unit_of_work.committed is True
     assert unit_of_work.rolled_back is False
 

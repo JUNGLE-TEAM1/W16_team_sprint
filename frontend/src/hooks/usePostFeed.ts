@@ -48,7 +48,7 @@ export function usePostFeed({ setError }: UsePostFeedOptions) {
     } catch (requestError) {
       setPosts([]);
       setSelectedPostId(null);
-      setError(requestError instanceof Error ? requestError.message : "게시글을 불러오지 못했습니다.");
+      setError(requestError instanceof Error ? requestError.message : "지원 카드를 불러오지 못했습니다.");
     } finally {
       setLoadingPosts(false);
     }

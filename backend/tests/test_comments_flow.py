@@ -68,7 +68,7 @@ def test_create_comment_for_missing_post_returns_common_error_shape() -> None:
     assert response.json() == {
         "error": {
             "code": "POST_NOT_FOUND",
-            "message": "게시글을 찾을 수 없습니다.",
+            "message": "지원 카드나 상담 케이스를 찾을 수 없습니다.",
             "details": {"post_id": 999},
         }
     }
@@ -81,7 +81,7 @@ def test_delete_missing_comment_returns_common_error_shape() -> None:
     assert response.json() == {
         "error": {
             "code": "COMMENT_NOT_FOUND",
-            "message": "댓글을 찾을 수 없습니다.",
+            "message": "상담 메모를 찾을 수 없습니다.",
             "details": {"comment_id": 999},
         }
     }

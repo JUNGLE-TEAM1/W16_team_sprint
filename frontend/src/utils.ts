@@ -33,13 +33,13 @@ export function readingMinutes(value: string) {
   return Math.max(1, Math.ceil(value.length / 520));
 }
 
-export function sprintNumber(post: Post) {
-  const match = post.title.match(/Sprint\s+(\d+)/i);
-  return match ? `S${match[1]}` : "글";
+export function supportBadge(post: Post) {
+  const match = post.title.match(/^\[([^\]/]+)/);
+  return match ? match[1] : post.author_name === "data-bot" ? "카드" : "상담";
 }
 
 export function riskText(risk: RagMatch["duplicate_risk"]) {
-  if (risk === "high") return "중복 위험 높음";
-  if (risk === "medium") return "관련 글";
-  return "느슨한 연결";
+  if (risk === "high") return "강한 매칭";
+  if (risk === "medium") return "관련 카드";
+  return "참고 후보";
 }

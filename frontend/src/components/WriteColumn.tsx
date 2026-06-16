@@ -1,45 +1,38 @@
-import type { FormEventHandler } from "react";
 import { Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
 
-import type { AgentWritingAssistResponse, CurrentUser, DraftPost, RagAssistResponse } from "../types";
+import type { AgentWritingAssistResponse, DraftPost, RagAssistResponse } from "../types";
 import { riskText } from "../utils";
 
 type WriteColumnProps = {
   showComposer: boolean;
   editingPostId: number | null;
-  currentUser: CurrentUser | null;
   draftPost: DraftPost;
   agentResult: AgentWritingAssistResponse | null;
   ragResult: RagAssistResponse | null;
   runningAgent: boolean;
   runningRag: boolean;
-  savingPost: boolean;
   onOpenComposer: () => void;
   onCancelEdit: () => void;
   onDraftPostChange: (draftPost: DraftPost) => void;
   onWritingAgent: () => void;
   onApplyAgentSuggestion: () => void;
   onRagAssist: () => void;
-  onSavePost: FormEventHandler<HTMLFormElement>;
 };
 
 export function WriteColumn({
   showComposer,
   editingPostId,
-  currentUser,
   draftPost,
   agentResult,
   ragResult,
   runningAgent,
   runningRag,
-  savingPost,
   onOpenComposer,
   onCancelEdit,
   onDraftPostChange,
   onWritingAgent,
   onApplyAgentSuggestion,
   onRagAssist,
-  onSavePost,
 }: WriteColumnProps) {
   return (
     <aside className="writeColumn">
@@ -47,37 +40,37 @@ export function WriteColumn({
         <section className="quietPanel">
           <div className="panelTop">
             <Sparkles size={18} />
-            <span>새 기록</span>
+            <span>상담 케이스</span>
           </div>
           <button className="wideGhostButton" type="button" onClick={onOpenComposer}>
             <Plus size={16} />
-            글쓰기
+            내 상황 입력
           </button>
         </section>
       ) : (
         <section className="composerPanel">
           <div className="panelHeader">
             <div>
-              <span className="kicker">{editingPostId ? "Editing" : "Writing"}</span>
-              <strong>{editingPostId ? "글 수정" : "새 글"}</strong>
+              <span className="kicker">{editingPostId ? "Editing" : "Consulting"}</span>
+              <strong>{editingPostId ? "상담 케이스 수정" : "내 상황 입력"}</strong>
             </div>
-            <button className="plainIcon" type="button" onClick={onCancelEdit} aria-label="작성 취소">
+            <button className="plainIcon" type="button" onClick={onCancelEdit} aria-label="상담 작성 취소">
               <X size={17} />
             </button>
           </div>
 
-          <form className="composerForm" onSubmit={onSavePost}>
+          <form className="composerForm" onSubmit={(event) => event.preventDefault()}>
             <input
-              aria-label="글 제목"
-              placeholder="제목"
+              aria-label="상담 제목"
+              placeholder="예: 서울 24세 취준생 월세 지원 상담"
               value={draftPost.title}
               onChange={(event) => onDraftPostChange({ ...draftPost, title: event.target.value })}
               required
               maxLength={120}
             />
             <textarea
-              aria-label="글 내용"
-              placeholder="내용"
+              aria-label="상담 내용"
+              placeholder="거주 지역, 나이, 소득, 고용 상태, 주거 상황을 적어 주세요."
               value={draftPost.content}
               onChange={(event) => onDraftPostChange({ ...draftPost, content: event.target.value })}
               required
@@ -86,7 +79,7 @@ export function WriteColumn({
               <Tag size={15} />
               <input
                 aria-label="태그"
-                placeholder="sprint, rag"
+                placeholder="청년, 주거, 마포구"
                 value={draftPost.tagNames}
                 onChange={(event) => onDraftPostChange({ ...draftPost, tagNames: event.target.value })}
               />
@@ -95,7 +88,7 @@ export function WriteColumn({
               <ExternalLink size={15} />
               <input
                 aria-label="참고 URL"
-                placeholder="참고 URL, 쉼표로 여러 개"
+                placeholder="정책/공공데이터 URL, 쉼표로 여러 개"
                 value={draftPost.referenceUrls}
                 onChange={(event) =>
                   onDraftPostChange({ ...draftPost, referenceUrls: event.target.value })
@@ -105,18 +98,14 @@ export function WriteColumn({
             <div className="buttonRow">
               <button className="outlineButton" type="button" onClick={onWritingAgent} disabled={runningAgent}>
                 <Bot size={15} />
-                {runningAgent ? "추천 중" : "Agent 추천"}
+                {runningAgent ? "정리 중" : "상담 초안 추천"}
               </button>
               <button className="outlineButton" type="button" onClick={onRagAssist} disabled={runningRag}>
                 <Sparkles size={15} />
-                {runningRag ? "검사 중" : "RAG 검사"}
-              </button>
-              <button className="mintButton" type="submit" disabled={savingPost || !currentUser}>
-                <Plus size={15} />
-                {savingPost ? "저장 중" : editingPostId ? "수정" : "발행"}
+                {runningRag ? "매칭 중" : "AI 매칭"}
               </button>
             </div>
-            {!currentUser && <p className="panelHint">로그인 후 발행할 수 있습니다.</p>}
+            <p className="panelHint">입력한 상황은 저장되지 않고, AI 매칭 요청에만 일회성으로 사용됩니다.</p>
           </form>
         </section>
       )}
@@ -126,7 +115,7 @@ export function WriteColumn({
           <div className="panelHeader">
             <div>
               <span className="kicker">Agent</span>
-              <strong>초안과 태그 추천</strong>
+              <strong>상담 초안과 태그 추천</strong>
             </div>
             <span className="softPill">{Math.round(agentResult.confidence * 100)}%</span>
           </div>
@@ -154,7 +143,7 @@ export function WriteColumn({
           <div className="panelHeader">
             <div>
               <span className="kicker">RAG</span>
-              <strong>{ragResult.duplicate_warning ? "비슷한 글이 있습니다" : "관련 글"}</strong>
+              <strong>{ragResult.duplicate_warning ? "관련도 높은 카드 있음" : "지원 카드 매칭"}</strong>
             </div>
             <div className="ragPills">
               <span className={ragResult.llm_used ? "softPill active" : "softPill"}>
@@ -176,11 +165,11 @@ export function WriteColumn({
                 <p>{match.summary}</p>
               </article>
             ))}
-            {ragResult.matches.length === 0 && <p className="muted">가까운 글이 없습니다.</p>}
+            {ragResult.matches.length === 0 && <p className="muted">가까운 지원 카드가 없습니다.</p>}
           </div>
           {ragResult.references.length > 0 && (
             <div className="ragReferences">
-              <span className="kicker">References</span>
+              <span className="kicker">Public Data References</span>
               {ragResult.references.map((reference) => (
                 <a href={reference.url} key={reference.url} target="_blank" rel="noreferrer">
                   <span>

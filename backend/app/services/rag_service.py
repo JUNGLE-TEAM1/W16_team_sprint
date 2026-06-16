@@ -10,10 +10,9 @@ from fastapi import status
 from backend.app.core.config import settings
 from backend.app.core.embedding import (
     EmbeddingError,
-    active_embedding_provider,
-    cosine_similarity,
+    LOCAL_EMBEDDING_DIMENSIONS,
     embed_text,
-    embedding_dimensions,
+    embed_text_local,
     token_overlap,
 )
 from backend.app.core.errors import AppError
@@ -67,12 +66,7 @@ class RagService:
 
     def index_post(self, post: Post) -> None:
         try:
-            source_text = self._source_text(post)
-            self.embeddings.upsert(
-                post_id=post.id,
-                source_text=source_text,
-                vector=embed_text(source_text),
-            )
+            self._upsert_post_embedding(post)
         except EmbeddingError as exc:
             raise AppError(
                 code="EMBEDDING_FAILED",
@@ -85,26 +79,18 @@ class RagService:
         if not query_text:
             raise AppError(
                 code="RAG_INPUT_REQUIRED",
-                message="RAG 검색에는 제목이나 초안이 필요합니다.",
+                message="AI 매칭에는 상담 제목이나 현재 상황이 필요합니다.",
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
         self._ensure_indexed()
-        try:
-            query_vector = embed_text(query_text)
-        except EmbeddingError as exc:
-            raise AppError(
-                code="EMBEDDING_FAILED",
-                message="Embedding generation failed. Check OPENAI_API_KEY and embedding settings.",
-                status_code=status.HTTP_502_BAD_GATEWAY,
-            ) from exc
+        current_embeddings = self._support_card_embeddings()
+        expected_dimensions = self._expected_index_dimensions(current_embeddings)
 
         scored_matches = []
-        for embedding, post in self.embeddings.list_with_posts():
-            stored_vector = json.loads(embedding.vector_json)
-            vector_score = cosine_similarity(query_vector, stored_vector)
+        for embedding, post in current_embeddings:
             overlap_score = token_overlap(query_text, embedding.source_text)
-            score = max(0.0, min(1.0, (vector_score * 0.7) + (overlap_score * 0.3)))
+            score = max(0.0, min(1.0, overlap_score))
             scored_matches.append((score, post, embedding.source_text))
 
         scored_matches.sort(key=lambda match: match[0], reverse=True)
@@ -123,13 +109,14 @@ class RagService:
         ]
 
         duplicate_warning = any(match.score >= 0.58 for match in matches)
+        should_fetch_references = payload.include_references or bool(payload.reference_urls)
         references = (
             fetch_reference_materials(
                 query_text=query_text,
                 matches=matches,
                 reference_urls=payload.reference_urls,
             )
-            if payload.include_references
+            if should_fetch_references
             else []
         )
         recommendation, enriched_matches, llm_used = self._assist_with_llm(
@@ -140,11 +127,9 @@ class RagService:
         )
 
         return RagAssistResponse(
-            embedding_dimensions=len(query_vector),
-            embedding_provider=active_embedding_provider(),
-            embedding_model=settings.openai_embedding_model
-            if active_embedding_provider() == "openai"
-            else "local-hash",
+            embedding_dimensions=expected_dimensions,
+            embedding_provider="support-card-index",
+            embedding_model="query-not-embedded",
             llm_provider="openai" if llm_used else "none",
             llm_model=settings.openai_llm_model if llm_used else "rule-fallback",
             llm_used=llm_used,
@@ -156,8 +141,8 @@ class RagService:
         )
 
     def _ensure_indexed(self) -> None:
-        expected_dimensions = embedding_dimensions()
-        current_embeddings = self.embeddings.list_with_posts()
+        current_embeddings = self._support_card_embeddings()
+        expected_dimensions = self._expected_index_dimensions(current_embeddings)
         indexed_post_ids = {embedding.post_id for embedding, _ in current_embeddings}
         stale_post_ids = {
             embedding.post_id
@@ -165,14 +150,44 @@ class RagService:
             if self._vector_dimensions(embedding.vector_json) != expected_dimensions
         }
         posts, _ = self.posts.list(page=1, size=500)
+        support_posts = [post for post in posts if self._is_support_card(post)]
         try:
-            for post in posts:
+            for post in support_posts:
                 if post.id not in indexed_post_ids or post.id in stale_post_ids:
-                    self.index_post(post)
+                    self._upsert_post_embedding(post, expected_dimensions=expected_dimensions)
             self.unit_of_work.commit()
         except Exception:
             self.unit_of_work.rollback()
             raise
+
+    def _support_card_embeddings(self) -> list[tuple[PostEmbedding, Post]]:
+        return [
+            (embedding, post)
+            for embedding, post in self.embeddings.list_with_posts()
+            if self._is_support_card(post)
+        ]
+
+    def _is_support_card(self, post: Post) -> bool:
+        return post.author_name == "data-bot"
+
+    def _upsert_post_embedding(self, post: Post, expected_dimensions: int | None = None) -> None:
+        source_text = self._source_text(post)
+        self.embeddings.upsert(
+            post_id=post.id,
+            source_text=source_text,
+            vector=self._embed_text(source_text, expected_dimensions=expected_dimensions),
+        )
+
+    def _embed_text(self, value: str, expected_dimensions: int | None = None) -> list[float]:
+        if expected_dimensions == LOCAL_EMBEDDING_DIMENSIONS:
+            return embed_text_local(value)
+        try:
+            return embed_text(value)
+        except EmbeddingError:
+            return embed_text_local(value)
+
+    def _expected_index_dimensions(self, embeddings: list[tuple[PostEmbedding, Post]]) -> int:
+        return LOCAL_EMBEDDING_DIMENSIONS
 
     def _assist_with_llm(
         self,
@@ -192,12 +207,8 @@ class RagService:
                 references=references,
                 duplicate_warning=duplicate_warning,
             )
-        except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise AppError(
-                code="LLM_ASSIST_FAILED",
-                message="LLM assist failed. Check OPENAI_API_KEY and OpenAI LLM settings.",
-                status_code=status.HTTP_502_BAD_GATEWAY,
-            ) from exc
+        except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return self._recommendation(matches, duplicate_warning), matches, False
 
         recommendation = llm_payload.get("recommendation")
         if not isinstance(recommendation, str) or not recommendation.strip():
@@ -229,8 +240,8 @@ class RagService:
                 {
                     "role": "system",
                     "content": (
-                        "너는 게시판 작성 보조 RAG 어시스턴트다. "
-                        "사용자의 초안, 제공된 유사 게시글 후보, 참고자료만 근거로 한국어 추천을 작성한다. "
+                        "너는 공공데이터 기반 생활지원 매칭 RAG 상담 어시스턴트다. "
+                        "사용자의 상담 상황, 제공된 지원 카드 후보, 참고자료만 근거로 한국어 추천을 작성한다. "
                         "새 사실을 지어내지 말고 JSON만 반환한다."
                     ),
                 },
@@ -285,16 +296,17 @@ class RagService:
         return json.dumps(
             {
                 "task": (
-                    "추천 문구 1개와 후보별 요약을 JSON으로 작성하세요. "
-                    "recommendation은 220자 이내, summary는 후보당 120자 이내. "
-                    "중복 위험이 높으면 기존 글에 댓글/보완으로 이어갈지, 새 글이면 어떤 관점을 달리할지 제안하세요."
+                    "생활지원 추천 문구 1개와 후보별 요약을 JSON으로 작성하세요. "
+                    "recommendation은 260자 이내로 받을 수 있는 지원 후보, 조건 충족/부족 사유, "
+                    "신청 체크리스트, 상담 경로를 포함하세요. summary는 후보당 120자 이내. "
+                    "조건이 불확실하면 추가 확인이 필요하다고 명확히 말하세요."
                 ),
                 "output_schema": {
                     "recommendation": "string",
                     "match_summaries": [{"post_id": "number", "summary": "string"}],
                 },
                 "duplicate_warning": duplicate_warning,
-                "draft": query_text,
+                "case": query_text,
                 "matches": match_lines,
                 "references": [
                     {
@@ -373,7 +385,7 @@ class RagService:
 
     def _summary(self, post: Post, score: float) -> str:
         tag_text = ", ".join(tag.name for tag in post.tags) or "no tags"
-        return f"{post.title} 글은 {tag_text} 주제를 다루며 현재 초안과 유사도 {score:.2f}로 연결됩니다."
+        return f"{post.title} 카드는 {tag_text} 조건과 연결되며 현재 상담과 관련도 {score:.2f}로 매칭됩니다."
 
     def _duplicate_risk(self, score: float) -> str:
         if score >= 0.58:
@@ -384,7 +396,7 @@ class RagService:
 
     def _recommendation(self, matches: list[RagMatch], duplicate_warning: bool) -> str:
         if not matches:
-            return "비슷한 기존 글을 찾지 못했습니다. 새 글로 작성해도 좋아 보입니다."
+            return "가까운 지원 카드를 찾지 못했습니다. 지역, 나이, 소득, 주거 상태를 더 구체적으로 적어 다시 매칭해 보세요."
         if duplicate_warning:
-            return "유사도가 높은 기존 글이 있습니다. 제목과 문제 상황을 더 구체화하거나 기존 글의 댓글로 보완하는 방식을 검토하세요."
-        return "완전한 중복은 낮아 보입니다. 관련 글을 참고해 배경 링크와 태그를 보강해 보세요."
+            return "관련도가 높은 지원 카드가 있습니다. 대상 조건과 신청기간을 먼저 확인하고, 주민센터나 담당 기관 상담으로 자격을 확정하세요."
+        return "연결 가능한 지원 카드가 있습니다. 상위 후보의 지역, 대상, 문의처를 비교하고 부족한 조건은 상담 메모로 보강해 보세요."

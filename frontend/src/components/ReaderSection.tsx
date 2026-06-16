@@ -73,13 +73,13 @@ export function ReaderSection({
             <div className="commentsHeader">
               <strong>
                 <MessageCircle size={16} />
-                댓글 {comments.length}
+                상담 메모 {comments.length}
               </strong>
             </div>
             <form className="commentForm" onSubmit={onSaveComment}>
               <textarea
-                aria-label="댓글"
-                placeholder="댓글을 남겨 보세요."
+                aria-label="상담 메모"
+                placeholder="추가 조건이나 상담 메모를 남겨 보세요."
                 value={draftComment}
                 onChange={(event) => onDraftCommentChange(event.target.value)}
                 required
@@ -107,7 +107,7 @@ export function ReaderSection({
                         className="plainIcon dangerIcon"
                         type="button"
                         onClick={() => onDeleteComment(comment)}
-                        aria-label="댓글 삭제"
+                        aria-label="상담 메모 삭제"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -115,14 +115,14 @@ export function ReaderSection({
                   </article>
                 );
               })}
-              {!loadingComments && comments.length === 0 && <p className="muted">아직 댓글이 없습니다.</p>}
+              {!loadingComments && comments.length === 0 && <p className="muted">아직 상담 메모가 없습니다.</p>}
             </div>
           </section>
         </article>
       ) : (
         <div className="emptyState">
           <MessageCircle size={24} />
-          <strong>글을 선택해 주세요</strong>
+          <strong>지원 카드나 상담 케이스를 선택해 주세요</strong>
         </div>
       )}
     </section>

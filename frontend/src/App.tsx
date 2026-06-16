@@ -6,10 +6,10 @@ import { ReaderSection } from "./components/ReaderSection";
 import { SearchToolbar } from "./components/SearchToolbar";
 import { TagRail } from "./components/TagRail";
 import { WriteColumn } from "./components/WriteColumn";
-import { useSprintBoard } from "./hooks/useSprintBoard";
+import { useLifeSupportBoard } from "./hooks/useLifeSupportBoard";
 
 export function App() {
-  const board = useSprintBoard();
+  const board = useLifeSupportBoard();
 
   return (
     <main className="brunchShell">
@@ -66,20 +66,17 @@ export function App() {
         <WriteColumn
           showComposer={board.showComposer}
           editingPostId={board.editingPostId}
-          currentUser={board.currentUser}
           draftPost={board.draftPost}
           agentResult={board.agentResult}
           ragResult={board.ragResult}
           runningAgent={board.runningAgent}
           runningRag={board.runningRag}
-          savingPost={board.savingPost}
           onOpenComposer={() => board.setShowComposer(true)}
           onCancelEdit={board.cancelEdit}
           onDraftPostChange={board.setDraftPost}
           onWritingAgent={() => void board.handleWritingAgent()}
           onApplyAgentSuggestion={board.applyAgentSuggestion}
           onRagAssist={() => void board.handleRagAssist()}
-          onSavePost={(event) => void board.handleSavePost(event)}
         />
       </section>
 

@@ -23,8 +23,8 @@ export function SearchToolbar({
       <form className="searchForm" onSubmit={onSearch}>
         <Search size={18} />
         <input
-          aria-label="게시글 검색"
-          placeholder="스프린트, 인증, RAG 검색"
+          aria-label="지원 카드 검색"
+          placeholder="청년월세, 마포구, 취업, 복지시설"
           value={filters.q}
           onChange={(event) => onFiltersChange({ ...filters, q: event.target.value })}
         />

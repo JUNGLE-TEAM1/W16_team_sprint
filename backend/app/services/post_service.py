@@ -75,7 +75,8 @@ class PostService:
         )
         try:
             saved_post = self.posts.create(post)
-            RagService(self.posts, self.embeddings, self.unit_of_work).index_post(saved_post)
+            if self._should_index_post(saved_post):
+                RagService(self.posts, self.embeddings, self.unit_of_work).index_post(saved_post)
             self.unit_of_work.commit()
             return saved_post
         except Exception:
@@ -104,7 +105,7 @@ class PostService:
         if post is None:
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="게시글을 찾을 수 없습니다.",
+                message="지원 카드나 상담 케이스를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )
@@ -123,7 +124,8 @@ class PostService:
             post.tags = self.tags.get_or_create_many(self._normalize_tag_names(payload.tag_names))
 
         try:
-            RagService(self.posts, self.embeddings, self.unit_of_work).index_post(post)
+            if self._should_index_post(post):
+                RagService(self.posts, self.embeddings, self.unit_of_work).index_post(post)
             self.unit_of_work.commit()
             return self.get(post.id)
         except Exception:
@@ -148,7 +150,7 @@ class PostService:
             return
         raise AppError(
             code="FORBIDDEN",
-            message="게시글을 변경할 권한이 없습니다.",
+            message="지원 카드나 상담 케이스를 변경할 권한이 없습니다.",
             status_code=status.HTTP_403_FORBIDDEN,
             details={"post_id": post.id},
         )
@@ -160,3 +162,6 @@ class PostService:
             if normalized_name and normalized_name not in normalized_names:
                 normalized_names.append(normalized_name)
         return normalized_names[:8]
+
+    def _should_index_post(self, post: Post) -> bool:
+        return post.author_name == "data-bot"

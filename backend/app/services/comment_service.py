@@ -72,14 +72,14 @@ class CommentService:
         if comment is None:
             raise AppError(
                 code="COMMENT_NOT_FOUND",
-                message="댓글을 찾을 수 없습니다.",
+                message="상담 메모를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"comment_id": comment_id},
             )
         if user.role != "admin" and comment.user_id != user.id:
             raise AppError(
                 code="FORBIDDEN",
-                message="댓글을 삭제할 권한이 없습니다.",
+                message="상담 메모를 삭제할 권한이 없습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"comment_id": comment_id},
             )
@@ -95,7 +95,7 @@ class CommentService:
         if self.posts.get(post_id) is None:
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="게시글을 찾을 수 없습니다.",
+                message="지원 카드나 상담 케이스를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )

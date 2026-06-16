@@ -15,7 +15,7 @@ from backend.app.core.config import settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.core.rate_limit import SimpleRateLimitMiddleware
 from backend.app.db.base import Base
-from backend.app.db.seeds import seed_demo_users, seed_sprint_posts
+from backend.app.db.seeds import seed_demo_users, seed_support_cards
 from backend.app.db.session import engine
 
 
@@ -24,7 +24,7 @@ def create_lifespan(database_engine=engine):
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         Base.metadata.create_all(bind=database_engine)
         seed_demo_users(database_engine)
-        seed_sprint_posts(database_engine)
+        seed_support_cards(database_engine)
         yield
 
     return lifespan
@@ -32,7 +32,7 @@ def create_lifespan(database_engine=engine):
 
 def create_app(database_engine=engine) -> FastAPI:
     app = FastAPI(
-        title="Sprint 1 API Data Flow",
+        title="AI Life Support Matching Board API",
         lifespan=create_lifespan(database_engine),
     )
     register_error_handlers(app)

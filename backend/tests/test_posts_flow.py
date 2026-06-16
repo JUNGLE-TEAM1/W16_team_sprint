@@ -126,7 +126,7 @@ def test_get_missing_post_returns_common_error_shape() -> None:
     assert response.json() == {
         "error": {
             "code": "POST_NOT_FOUND",
-            "message": "게시글을 찾을 수 없습니다.",
+            "message": "지원 카드나 상담 케이스를 찾을 수 없습니다.",
             "details": {"post_id": 999},
         }
     }

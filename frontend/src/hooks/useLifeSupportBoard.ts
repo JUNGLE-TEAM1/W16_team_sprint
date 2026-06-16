@@ -5,7 +5,7 @@ import { useComments } from "./useComments";
 import { usePostFeed } from "./usePostFeed";
 import { useWriter } from "./useWriter";
 
-export function useSprintBoard() {
+export function useLifeSupportBoard() {
   const [error, setError] = useState<string | null>(null);
   const auth = useAuthSession({ setError });
   const feed = usePostFeed({ setError });
@@ -25,9 +25,7 @@ export function useSprintBoard() {
     setShowAuthPanel: auth.setShowAuthPanel,
   });
 
-  const canEditSelectedPost =
-    Boolean(auth.currentUser && feed.selectedPost) &&
-    (auth.currentUser?.role === "admin" || feed.selectedPost?.user_id === auth.currentUser?.id);
+  const canEditSelectedPost = false;
 
   return {
     ...auth,

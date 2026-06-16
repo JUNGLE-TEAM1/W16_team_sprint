@@ -6,7 +6,7 @@ import httpx
 
 from backend.app.core.config import settings
 
-LOCAL_EMBEDDING_DIMENSIONS = 64
+LOCAL_EMBEDDING_DIMENSIONS = 1536
 
 
 class EmbeddingError(RuntimeError):
@@ -39,6 +39,10 @@ def tokens(value: str) -> list[str]:
 def embed_text(value: str) -> list[float]:
     if active_embedding_provider() == "openai":
         return _embed_with_openai(value)
+    return _embed_with_local_hash(value)
+
+
+def embed_text_local(value: str) -> list[float]:
     return _embed_with_local_hash(value)
 
 

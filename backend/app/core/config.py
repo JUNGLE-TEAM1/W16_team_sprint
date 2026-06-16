@@ -1,5 +1,28 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+
+def load_dotenv_if_present() -> None:
+    env_path = Path(__file__).resolve().parents[3] / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+
+        value = value.strip().strip('"').strip("'")
+        os.environ[key] = value
+
+
+load_dotenv_if_present()
 
 
 def env_bool(name: str, default: bool) -> bool:
@@ -22,7 +45,11 @@ class Settings:
         origin.strip()
         for origin in os.getenv(
             "ALLOWED_ORIGINS",
-            "http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000",
+            (
+                "http://localhost:3000,http://127.0.0.1:3000,"
+                "http://localhost:3001,http://127.0.0.1:3001,"
+                "http://127.0.0.1:8000,http://127.0.0.1:8001"
+            ),
         ).split(",")
         if origin.strip()
     )

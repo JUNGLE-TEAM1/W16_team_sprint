@@ -50,14 +50,15 @@ export function fetchComments(postId: number) {
 }
 
 export function runRagAssist(draftPost: DraftPost) {
+  const referenceUrls = parseReferenceUrls(draftPost.referenceUrls);
   return request<RagAssistResponse>("/api/v1/rag/assist", {
     method: "POST",
     body: JSON.stringify({
       title: draftPost.title,
       content: draftPost.content,
-      top_k: 3,
-      include_references: true,
-      reference_urls: parseReferenceUrls(draftPost.referenceUrls),
+      top_k: 5,
+      include_references: referenceUrls.length > 0,
+      reference_urls: referenceUrls,
     }),
   });
 }

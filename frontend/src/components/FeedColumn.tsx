@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 
 import type { Post, PostMeta } from "../types";
-import { excerpt, formatDate, readingMinutes, sprintNumber } from "../utils";
+import { excerpt, formatDate, supportBadge } from "../utils";
 
 type FeedColumnProps = {
   posts: Post[];
@@ -29,7 +29,7 @@ export function FeedColumn({
       <div className="feedHeader">
         <div>
           <span className="kicker">{hasActiveFilters ? "Filtered" : "Latest"}</span>
-          <h2>읽을 글</h2>
+          <h2>지원 카드</h2>
         </div>
         <div className="pager">
           <button
@@ -76,7 +76,8 @@ export function FeedColumn({
               <strong>{post.title}</strong>
               <span className="excerpt">{excerpt(post.content)}</span>
               <span className="metaLine">
-                by {post.author_name} · {formatDate(post.created_at)} · 읽기 {readingMinutes(post.content)}분
+                {post.author_name === "data-bot" ? "공공데이터 카드" : "상담 케이스"} ·{" "}
+                {formatDate(post.created_at)}
               </span>
               <span className="tagLine">
                 {post.tags.map((tagItem) => (
@@ -84,15 +85,15 @@ export function FeedColumn({
                 ))}
               </span>
             </span>
-            <span className="articleThumb">{sprintNumber(post)}</span>
+            <span className="articleThumb">{supportBadge(post)}</span>
           </button>
         ))}
 
         {!loadingPosts && posts.length === 0 && (
           <div className="emptyState">
             <FileText size={24} />
-            <strong>맞는 글이 없습니다</strong>
-            <span>검색어를 바꾸거나 태그 필터를 초기화해 주세요.</span>
+            <strong>맞는 지원 카드가 없습니다</strong>
+            <span>지역, 대상, 지원 분야 검색어를 바꾸거나 태그 필터를 초기화해 주세요.</span>
             {hasActiveFilters && (
               <button className="outlineButton" type="button" onClick={onClearFilters}>
                 초기화

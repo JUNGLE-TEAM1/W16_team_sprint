@@ -1,8 +1,34 @@
-# W16 팀 스프린트
+# AI 생활지원 매칭 보드
 
-팀 스프린트 학습을 위한 저장소입니다.
+공공데이터 기반으로 사용자의 상황에 맞는 복지정책, 청년지원, 공공시설, 생활 인프라를 찾아주는 AI 상담 보드입니다.
 
-이 레포는 나만무 프로젝트를 시작하기 전에 팀원들이 같은 기술 언어로 의사결정할 수 있도록, 핵심 학습 주제와 산출물을 정리하고 공유하는 공간입니다. 목표는 모든 사람이 모든 영역을 같은 깊이로 아는 것이 아니라, 회의에서 막히지 않을 정도의 공통 이해를 맞추는 것입니다.
+기존 게시판 구조를 유지하되 `Post`는 `data-bot`이 적재한 지원 카드 중심으로 재해석합니다. 사용자가 입력한 현재 상황은 저장하지 않는 일회성 RAG/Agent 요청으로만 처리합니다. `Tag`는 청년, 주거, 취업, 복지시설 같은 조건 필터가 되고, RAG는 사용자의 현재 상황과 미리 적재된 생활지원 카드를 매칭합니다.
+
+## 현재 컨셉
+
+- 서비스명: AI 생활지원 매칭 보드
+- 사용자 입력: "서울 거주 24세 취준생, 월세 60만 원, 소득 없음. 받을 수 있는 지원 있나요?" 같은 일회성 매칭 요청
+- AI 결과: 청년월세, 취업지원, 복지시설, 신청 체크리스트, 상담 경로
+- 데이터: `data-bot`이 등록한 공공데이터 기반 지원 카드 50개 seed
+- 확장: 공공데이터포털, 온통청년, 서울 열린데이터광장 CSV/API 행을 `Post` 카드로 변환 가능
+
+## DB 목표 구조와 v1 매핑
+
+장기 목표는 역할별 테이블을 분리하는 것입니다.
+
+- `support_cards`: 공공데이터 API/CSV에서 가져온 지원 정책, 복지시설, 생활 인프라 카드
+- `consultation_cases`: 사용자가 입력한 상담 상황. v1에서는 저장하지 않고, 이후 필요할 때 별도 테이블로 분리
+- `data_sources`: 공공데이터포털, 온통청년, 서울 열린데이터광장, 복지로 같은 API/URL 출처
+- `tags`: 청년, 주거, 취업, 복지시설, 마포구 같은 분류
+- `embeddings`: AI 매칭용 벡터
+
+v1에서는 새 마이그레이션 없이 기존 구현과 충돌을 줄이기 위해 아래처럼 매핑합니다.
+
+- `support_cards` -> `posts` 중 `author_name="data-bot"`인 지원 카드
+- `consultation_cases` -> v1에서는 DB에 저장하지 않음. 프론트 입력값은 RAG/Agent 요청 본문으로만 전송
+- `data_sources` -> 카드 본문 안의 `출처 URL`과 RAG 요청의 `reference_urls`
+- `tags` -> 기존 `tags`, `post_tags`
+- `embeddings` -> 기존 `post_embeddings`. v1에서는 `data-bot` 지원 카드만 저장하고 사용자 매칭 요청은 저장하거나 query embedding으로 만들지 않음
 
 ## 학습 기준
 
@@ -106,7 +132,7 @@ docker compose up -d db
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/posts \
   -H "Content-Type: application/json" \
-  -d '{"title":"스프린트 1","content":"API와 DB 흐름","author_name":"team1"}'
+  -d '{"title":"서울 청년 월세 상담","content":"서울 거주 24세 취준생이고 월세 60만 원을 내고 있습니다.","tag_names":["청년","주거","서울"]}'
 ```
 
 ```bash
@@ -130,24 +156,23 @@ curl http://127.0.0.1:8000/api/v1/posts/1
 - Sprint 4 프론트-백엔드 연결은 모든 기능 스프린트의 완료 기준에 포함합니다.
 - 기준: API만 끝나면 미완료. React 화면에서 실제로 사용할 수 있어야 완료.
 - 전체 기준은 [Sprint 로드맵](docs/sprint-roadmap.md)을 참고하세요.
-## Sprint 6 RAG 구현
+## AI 생활지원 RAG 구현
 
-이번 RAG는 MCP/Agent 없이 게시판 내부 데이터만 사용합니다.
+RAG는 게시판 내부 지원 카드와 MCP/외부 참고자료를 함께 사용합니다.
 
 구조:
 
 ```text
-글 작성/수정
--> title + content + tag 텍스트를 embedding
--> post_embeddings 테이블에 vector_json으로 저장
--> 글 작성 폼의 RAG duplicate check 버튼
+내 상황 일회성 입력
+-> 작성 폼의 AI 매칭 버튼
 -> POST /api/v1/rag/assist
--> 현재 초안 embedding과 기존 글 embedding 유사도 계산
--> 유사 게시글, 중복 위험도, 간단 요약/추천 문구 반환
+-> 입력값은 저장하지 않고 query embedding도 만들지 않음
+-> `data-bot` 지원 카드 텍스트/태그를 기준으로 유사 후보 계산
+-> 받을 수 있는 지원 후보, 조건 확인, 신청 체크리스트, 상담 경로 반환
 -> React 화면에 결과 표시
 ```
 
-현재 구현은 embedding으로 후보 글을 찾은 뒤 MCP 서버의 `fetch_reference_materials` tool로 공식 문서/외부 API 참고자료를 가져오고, OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서만 deterministic embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
+현재 구현은 `post_embeddings`에 저장된 `data-bot` 지원 카드 인덱스와 카드 텍스트/태그를 기준으로 후보 지원 카드를 찾은 뒤 MCP 서버의 `fetch_reference_materials` tool로 공공데이터/정책 참고자료를 가져오고, OpenAI Responses API의 LLM으로 추천 문구와 후보별 요약을 생성합니다. 사용자가 입력한 매칭 요청은 `posts`나 `post_embeddings`에 저장하지 않고 query embedding도 만들지 않습니다. `OPENAI_API_KEY`가 없는 로컬 테스트 환경에서는 deterministic support-card embedding과 규칙 기반 요약 fallback을 사용합니다. 나중에 pgvector를 붙이면 지원 카드용 `post_embeddings.vector_json` 저장 방식과 `RagService`의 similarity 계산 부분을 교체하면 됩니다.
 
 ## OpenAI API 설정
 
@@ -168,11 +193,11 @@ REFERENCE_MAX_ITEMS=3
 REFERENCE_TIMEOUT_SECONDS=2.5
 ```
 
-`OPENAI_API_KEY`가 비어 있으면 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 `POST /api/v1/rag/assist`가 OpenAI embedding API와 OpenAI Responses API 기반 LLM 추천을 사용합니다.
+`OPENAI_API_KEY`가 비어 있으면 1536차원 로컬 hash embedding과 규칙 기반 추천으로 fallback됩니다. API 키를 넣고 서버를 다시 실행하면 `POST /api/v1/rag/assist`가 OpenAI Responses API 기반 LLM 추천을 사용합니다. v1에서는 사용자 입력을 저장하거나 query embedding으로 만들지 않기 위해 지원 카드 인덱스만 로컬 1536차원 벡터로 유지합니다.
 
-기존에 64차원 로컬 벡터가 저장되어 있어도, OpenAI 1536차원 설정으로 바뀌면 RAG 실행 시 기존 게시글 임베딩을 자동으로 다시 생성합니다.
+기존에 64차원 로컬 벡터가 저장되어 있어도, 1536차원 기본 설정으로 바뀌면 RAG 실행 시 기존 카드 임베딩을 자동으로 다시 생성합니다.
 
-참고자료 수집은 `REFERENCE_FETCH_ENABLED=true`일 때 동작합니다. RAG 서비스가 stdio MCP client로 `backend.app.mcp.reference_server`를 실행하고, MCP tool이 참고자료를 반환합니다. `POST /api/v1/rag/assist` 요청에 `reference_urls`를 넣으면 해당 URL만 참고자료로 가져오고, URL이 없을 때만 `REFERENCE_API_URL` 외부 API와 FastAPI, React, OpenAI, PostgreSQL, SQLAlchemy, Vite 공식 문서 fallback을 사용합니다.
+참고자료 수집은 `REFERENCE_FETCH_ENABLED=true`일 때 동작합니다. RAG 서비스가 stdio MCP client로 `backend.app.mcp.reference_server`를 실행하고, MCP tool이 참고자료를 반환합니다. `POST /api/v1/rag/assist` 요청에 `reference_urls`를 넣으면 해당 URL만 참고자료로 가져오고, URL이 없을 때만 `REFERENCE_API_URL` 외부 API와 공공데이터포털, 온통청년, 서울 열린데이터광장, 복지로 fallback을 사용합니다.
 
 MCP 서버만 따로 확인하려면 아래처럼 실행할 수 있습니다.
 
