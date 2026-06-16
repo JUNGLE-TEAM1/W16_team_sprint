@@ -172,7 +172,7 @@ REFERENCE_TIMEOUT_SECONDS=2.5
 
 기존에 64차원 로컬 벡터가 저장되어 있어도, OpenAI 1536차원 설정으로 바뀌면 RAG 실행 시 기존 게시글 임베딩을 자동으로 다시 생성합니다.
 
-참고자료 수집은 `REFERENCE_FETCH_ENABLED=true`일 때 동작합니다. RAG 서비스가 stdio MCP client로 `backend.app.mcp.reference_server`를 실행하고, MCP tool이 참고자료를 반환합니다. `REFERENCE_API_URL`이 있으면 `q`, `limit` 쿼리로 외부 API를 먼저 호출하고, 없거나 부족하면 FastAPI, React, OpenAI, PostgreSQL, SQLAlchemy, Vite 공식 문서 후보에서 초안과 유사 글 키워드에 맞는 페이지를 가져옵니다.
+참고자료 수집은 `REFERENCE_FETCH_ENABLED=true`일 때 동작합니다. RAG 서비스가 stdio MCP client로 `backend.app.mcp.reference_server`를 실행하고, MCP tool이 참고자료를 반환합니다. `POST /api/v1/rag/assist` 요청에 `reference_urls`를 넣으면 해당 URL만 참고자료로 가져오고, URL이 없을 때만 `REFERENCE_API_URL` 외부 API와 FastAPI, React, OpenAI, PostgreSQL, SQLAlchemy, Vite 공식 문서 fallback을 사용합니다.
 
 MCP 서버만 따로 확인하려면 아래처럼 실행할 수 있습니다.
 

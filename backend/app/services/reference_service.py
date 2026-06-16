@@ -19,6 +19,7 @@ def fetch_reference_materials(
     *,
     query_text: str,
     matches: list[RagMatch],
+    reference_urls: list[str] | None = None,
 ) -> list[RagReference]:
     if not settings.reference_fetch_enabled:
         return []
@@ -28,6 +29,7 @@ def fetch_reference_materials(
             _call_reference_mcp(
                 query_text=query_text,
                 matches=[_match_payload(match) for match in matches],
+                reference_urls=reference_urls or [],
             )
         )
     except Exception:
@@ -40,6 +42,7 @@ async def _call_reference_mcp(
     *,
     query_text: str,
     matches: list[dict[str, Any]],
+    reference_urls: list[str],
 ) -> list[dict[str, Any]]:
     project_root = Path(__file__).resolve().parents[3]
     env = os.environ.copy()
@@ -64,6 +67,7 @@ async def _call_reference_mcp(
             {
                 "query_text": query_text,
                 "matches": matches,
+                "reference_urls": reference_urls,
             },
         )
 

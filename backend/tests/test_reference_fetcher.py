@@ -1,6 +1,8 @@
 from backend.app.mcp.reference_fetcher import (
+    _is_allowed_reference_url,
     _parse_external_api_payload,
     _rank_official_candidates,
+    _reference_urls,
 )
 
 
@@ -42,3 +44,18 @@ def test_rank_official_candidates_uses_draft_and_match_tags() -> None:
 
     assert candidates
     assert candidates[0].source == "FastAPI docs"
+
+
+def test_reference_urls_deduplicates_and_blocks_local_targets() -> None:
+    references = _reference_urls(
+        [
+            "https://fastapi.tiangolo.com/tutorial/security/",
+            "https://fastapi.tiangolo.com/tutorial/security",
+            "http://localhost:8000/private",
+            "http://127.0.0.1:8000/private",
+        ]
+    )
+
+    assert references == ["https://fastapi.tiangolo.com/tutorial/security/"]
+    assert _is_allowed_reference_url("https://react.dev/learn") is True
+    assert _is_allowed_reference_url("http://localhost:8000/private") is False

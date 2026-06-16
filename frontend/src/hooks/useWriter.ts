@@ -11,7 +11,7 @@ import type {
   TokenResponse,
 } from "../types";
 
-const EMPTY_DRAFT: DraftPost = { title: "", content: "", tagNames: "" };
+const EMPTY_DRAFT: DraftPost = { title: "", content: "", tagNames: "", referenceUrls: "" };
 
 type UseWriterOptions = {
   filters: PostFilters;
@@ -59,6 +59,7 @@ export function useWriter({
       title: agentResult.suggested_title,
       content: agentResult.suggested_content,
       tagNames: agentResult.suggested_tag_names.join(", "),
+      referenceUrls: draftPost.referenceUrls,
     });
   }
 
@@ -114,6 +115,7 @@ export function useWriter({
       title: post.title,
       content: post.content,
       tagNames: post.tags.map((tagItem) => tagItem.name).join(", "),
+      referenceUrls: "",
     });
   }
 

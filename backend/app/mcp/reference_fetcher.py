@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ipaddress
 import re
 from dataclasses import dataclass
 from html import unescape
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -70,6 +72,7 @@ def fetch_reference_payloads(
     *,
     query_text: str,
     matches: list[dict[str, Any]],
+    reference_urls: list[str] | None = None,
     enabled: bool,
     api_url: str,
     max_items: int,
@@ -81,6 +84,17 @@ def fetch_reference_payloads(
     limit = _bounded_int(max_items, minimum=1, maximum=5)
     timeout = _bounded_float(timeout_seconds, minimum=0.5, maximum=10.0)
     references: list[ReferencePayload] = []
+
+    custom_urls_requested = any(_clean(url) for url in reference_urls or [])
+    if custom_urls_requested:
+        return _dedupe_references(
+            _fetch_url_references(
+                urls=reference_urls or [],
+                source="custom-url",
+                limit=limit,
+                timeout_seconds=timeout,
+            )
+        )[:limit]
 
     references.extend(
         _fetch_external_api_references(
@@ -101,6 +115,27 @@ def fetch_reference_payloads(
         )
 
     return _dedupe_references(references)[:limit]
+
+
+def _fetch_url_references(
+    *,
+    urls: list[str],
+    source: str,
+    limit: int,
+    timeout_seconds: float,
+) -> list[ReferencePayload]:
+    safe_urls = _reference_urls(urls)[:limit]
+    if not safe_urls:
+        return []
+
+    references: list[ReferencePayload] = []
+    with httpx.Client(timeout=timeout_seconds) as client:
+        for url in safe_urls:
+            reference = _fetch_url_preview(client=client, url=url, source=source)
+            if reference is not None:
+                references.append(reference)
+
+    return references
 
 
 def _fetch_external_api_references(
@@ -173,18 +208,50 @@ def _fetch_official_doc_preview(
     client: httpx.Client,
     candidate: OfficialReferenceCandidate,
 ) -> ReferencePayload | None:
+    return _fetch_url_preview(
+        client=client,
+        url=candidate.url,
+        source=candidate.source,
+        fallback_title=candidate.title,
+        fallback_excerpt=candidate.excerpt,
+    )
+
+
+def _fetch_url_preview(
+    *,
+    client: httpx.Client,
+    url: str,
+    source: str,
+    fallback_title: str = "",
+    fallback_excerpt: str = "",
+) -> ReferencePayload | None:
+    current_url = url
     try:
-        response = client.get(candidate.url)
-        response.raise_for_status()
+        for _ in range(4):
+            if not _is_allowed_reference_url(current_url):
+                return None
+            response = client.get(current_url, follow_redirects=False)
+            if response.is_redirect:
+                next_request = response.next_request
+                if next_request is None:
+                    return None
+                current_url = str(next_request.url)
+                continue
+            response.raise_for_status()
+            break
+        else:
+            return None
     except httpx.HTTPError:
         return None
 
-    title = _extract_title(response.text) or candidate.title
-    excerpt = _extract_description(response.text) or candidate.excerpt
+    parsed_url = urlparse(str(response.url))
+    host = parsed_url.hostname or "Reference URL"
+    title = _extract_title(response.text) or fallback_title or host
+    excerpt = _extract_description(response.text) or fallback_excerpt or title
     return {
         "title": title[:120],
         "url": str(response.url),
-        "source": candidate.source,
+        "source": source,
         "excerpt": excerpt[:260],
     }
 
@@ -272,6 +339,40 @@ def _tag_names(value: Any) -> list[str]:
         elif isinstance(tag, dict):
             names.append(_clean(tag.get("name")))
     return [name for name in names if name]
+
+
+def _reference_urls(values: list[str]) -> list[str]:
+    seen_urls: set[str] = set()
+    safe_urls: list[str] = []
+    for value in values:
+        url = _clean(value)
+        if not url or not _is_allowed_reference_url(url):
+            continue
+        dedupe_key = url.rstrip("/")
+        if dedupe_key in seen_urls:
+            continue
+        seen_urls.add(dedupe_key)
+        safe_urls.append(url)
+    return safe_urls
+
+
+def _is_allowed_reference_url(value: str) -> bool:
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return False
+
+    host = (parsed.hostname or "").strip().lower()
+    if not host or host in {"localhost", "0.0.0.0"} or host.endswith(".localhost"):
+        return False
+    if host.endswith(".local") or "." not in host:
+        return False
+
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return True
+
+    return ip.is_global
 
 
 def _dedupe_references(references: list[ReferencePayload]) -> list[ReferencePayload]:

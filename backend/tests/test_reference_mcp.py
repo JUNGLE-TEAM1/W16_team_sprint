@@ -27,7 +27,11 @@ async def test_reference_mcp_server_exposes_fetch_tool() -> None:
         tools = await session.list_tools()
         result = await session.call_tool(
             "fetch_reference_materials",
-            {"query_text": "FastAPI JWT auth", "matches": []},
+            {
+                "query_text": "FastAPI JWT auth",
+                "matches": [],
+                "reference_urls": ["https://fastapi.tiangolo.com/tutorial/security/"],
+            },
         )
 
     assert "fetch_reference_materials" in {tool.name for tool in tools.tools}

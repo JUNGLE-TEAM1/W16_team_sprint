@@ -57,6 +57,7 @@ export function runRagAssist(draftPost: DraftPost) {
       content: draftPost.content,
       top_k: 3,
       include_references: true,
+      reference_urls: parseReferenceUrls(draftPost.referenceUrls),
     }),
   });
 }
@@ -104,4 +105,15 @@ export function saveComment(postId: number, content: string, token: string) {
 
 export function deleteComment(commentId: number, token: string) {
   return request<void>(`/api/v1/comments/${commentId}`, { method: "DELETE" }, token);
+}
+
+function parseReferenceUrls(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split(/[\s,]+/)
+        .map((url) => url.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 5);
 }

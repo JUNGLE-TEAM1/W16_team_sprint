@@ -124,7 +124,11 @@ class RagService:
 
         duplicate_warning = any(match.score >= 0.58 for match in matches)
         references = (
-            fetch_reference_materials(query_text=query_text, matches=matches)
+            fetch_reference_materials(
+                query_text=query_text,
+                matches=matches,
+                reference_urls=payload.reference_urls,
+            )
             if payload.include_references
             else []
         )

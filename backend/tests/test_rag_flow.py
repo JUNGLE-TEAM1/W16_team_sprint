@@ -151,9 +151,10 @@ def test_rag_assist_returns_reference_materials(monkeypatch) -> None:
     from backend.app.schemas.rag import RagReference
     from backend.app.services import rag_service
 
-    def fake_fetch_reference_materials(*, query_text, matches):
+    def fake_fetch_reference_materials(*, query_text, matches, reference_urls):
         assert "FastAPI" in query_text
         assert matches
+        assert reference_urls == ["https://fastapi.tiangolo.com/tutorial/security/"]
         return [
             RagReference(
                 title="FastAPI security tutorial",
@@ -170,6 +171,7 @@ def test_rag_assist_returns_reference_materials(monkeypatch) -> None:
         json={
             "title": "FastAPI JWT 401",
             "content": "Check Bearer token auth with official docs.",
+            "reference_urls": ["https://fastapi.tiangolo.com/tutorial/security/"],
         },
     )
 

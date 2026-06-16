@@ -106,6 +106,7 @@ export type DraftPost = {
   title: string;
   content: string;
   tagNames: string;
+  referenceUrls: string;
 };
 
 export type PostFilters = {

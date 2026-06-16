@@ -91,6 +91,17 @@ export function WriteColumn({
                 onChange={(event) => onDraftPostChange({ ...draftPost, tagNames: event.target.value })}
               />
             </label>
+            <label className="fieldWithIcon">
+              <ExternalLink size={15} />
+              <input
+                aria-label="참고 URL"
+                placeholder="참고 URL, 쉼표로 여러 개"
+                value={draftPost.referenceUrls}
+                onChange={(event) =>
+                  onDraftPostChange({ ...draftPost, referenceUrls: event.target.value })
+                }
+              />
+            </label>
             <div className="buttonRow">
               <button className="outlineButton" type="button" onClick={onWritingAgent} disabled={runningAgent}>
                 <Bot size={15} />
