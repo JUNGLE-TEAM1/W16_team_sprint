@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bot, Check, ExternalLink, Plus, Sparkles, Tag, X } from "lucide-react";
 
 import type { AgentWritingAssistResponse, DraftPost, RagAssistResponse } from "../types";
 import { riskText } from "../utils";
@@ -120,6 +120,21 @@ export function WriteColumn({
               <strong>상담 초안과 태그 추천</strong>
             </div>
             <span className="softPill">{Math.round(agentResult.confidence * 100)}%</span>
+          </div>
+          <div className="mvpHighlight">
+            <div className="mvpHighlightHeader">
+              <BadgeCheck size={15} />
+              <span>MVP 하이라이트</span>
+            </div>
+            <strong>{agentResult.mvp_highlight.title}</strong>
+            <p>
+              <b>왜 맞나</b>
+              {agentResult.mvp_highlight.why_it_fits}
+            </p>
+            <p>
+              <b>왜 하이라이트</b>
+              {agentResult.mvp_highlight.why_highlight}
+            </p>
           </div>
           <strong className="agentTitle">{agentResult.suggested_title}</strong>
           <p>{agentResult.suggested_content}</p>

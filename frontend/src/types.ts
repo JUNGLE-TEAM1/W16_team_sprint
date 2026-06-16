@@ -79,6 +79,11 @@ export type RagAssistResponse = {
 export type AgentWritingAssistResponse = {
   provider: string;
   model: string;
+  mvp_highlight: {
+    title: string;
+    why_it_fits: string;
+    why_highlight: string;
+  };
   suggested_title: string;
   suggested_content: string;
   suggested_tag_names: string[];

@@ -8,9 +8,16 @@ class AgentWritingAssistRequest(BaseModel):
     intent: str = Field(default="수원시 청년정책 상담 케이스와 태그를 추천해 주세요.", max_length=200)
 
 
+class AgentMvpHighlight(BaseModel):
+    title: str
+    why_it_fits: str
+    why_highlight: str
+
+
 class AgentWritingAssistResponse(BaseModel):
     provider: str
     model: str
+    mvp_highlight: AgentMvpHighlight
     suggested_title: str
     suggested_content: str
     suggested_tag_names: list[str]
