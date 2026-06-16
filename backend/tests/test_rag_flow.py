@@ -47,8 +47,8 @@ def test_rag_assist_finds_suwon_policy_cards() -> None:
     assert body["llm_provider"] == "none"
     assert body["llm_model"] == "rule-fallback"
     assert body["llm_used"] is False
-    assert any("청년월세지원사업" in match["title"] for match in body["matches"])
-    assert body["matches"][0]["score"] > 0
+    assert "청년월세지원사업" in body["matches"][0]["title"]
+    assert body["matches"][0]["score"] >= 0.55
     assert body["recommendation"]
 
 
@@ -78,6 +78,23 @@ def test_rag_assist_does_not_store_consultation_request_or_embedding() -> None:
 
     assert posts_after == posts_before
     assert embeddings_after == embeddings_before
+
+
+def test_rag_assist_scores_financial_need_above_generic_cards() -> None:
+    response = client.post(
+        "/api/v1/rag/assist",
+        json={
+            "title": "수원시 청년 정책 지원 상담",
+            "content": "현재 24세이며 경제적 어려움이 있습니다. 수원시 청년 지원 정책 중 생활비나 월세 부담을 줄일 수 있는 제도를 알고 싶습니다.",
+            "top_k": 3,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "청년월세지원사업" in body["matches"][0]["title"]
+    assert body["matches"][0]["score"] >= 0.55
+    assert all("창업" not in match["title"] for match in body["matches"][:1])
 
 
 def test_rag_assist_uses_openai_llm_when_api_key_is_configured(monkeypatch) -> None:

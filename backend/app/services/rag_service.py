@@ -13,7 +13,6 @@ from backend.app.core.embedding import (
     LOCAL_EMBEDDING_DIMENSIONS,
     embed_text,
     embed_text_local,
-    token_overlap,
 )
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
@@ -53,6 +52,50 @@ class UnitOfWork(Protocol):
         pass
 
 
+STOP_TERMS = {
+    "관련",
+    "도움",
+    "받고",
+    "받고자",
+    "상담",
+    "수원시에서",
+    "알고",
+    "있습니다",
+    "정책",
+    "정보",
+    "제공",
+    "지원",
+    "현재",
+}
+
+DOMAIN_INTENTS: tuple[dict[str, tuple[str, ...]], ...] = (
+    {
+        "query": ("경제", "경제적", "어려움", "소득", "돈", "금전", "지원금", "생활비", "월세", "임차료", "교통비"),
+        "card": ("월세", "임차료", "교통비", "기본소득", "지원금", "자산", "저축", "금융", "만원", "분기당"),
+    },
+    {
+        "query": ("월세", "주거", "임차", "전세", "보증금", "집", "거주"),
+        "card": ("월세", "주거", "임차", "임차료", "전월세", "보증금"),
+    },
+    {
+        "query": ("취업", "구직", "취준", "면접", "일자리", "직장"),
+        "card": ("취업", "구직", "면접", "일자리", "직장", "교통비"),
+    },
+    {
+        "query": ("창업", "사업", "스타트업", "기업"),
+        "card": ("창업", "사업화", "스타트업", "기업", "컨설팅"),
+    },
+    {
+        "query": ("아이디어", "대회", "공모", "프로젝트", "활동"),
+        "card": ("아이디어", "대회", "공모", "프로젝트", "활동"),
+    },
+    {
+        "query": ("교육", "강의", "강좌", "학습", "어학", "훈련"),
+        "card": ("교육", "강의", "강좌", "학습", "어학", "훈련"),
+    },
+)
+
+
 class RagService:
     def __init__(
         self,
@@ -89,8 +132,7 @@ class RagService:
 
         scored_matches = []
         for embedding, post in current_embeddings:
-            overlap_score = token_overlap(query_text, embedding.source_text)
-            score = max(0.0, min(1.0, overlap_score))
+            score = self._match_score(query_text=query_text, post=post, source_text=embedding.source_text)
             scored_matches.append((score, post, embedding.source_text))
 
         scored_matches.sort(key=lambda match: match[0], reverse=True)
@@ -407,6 +449,67 @@ class RagService:
     def _source_text(self, post: Post) -> str:
         tag_text = " ".join(tag.name for tag in post.tags)
         return f"{post.title}\n{post.content}\n{tag_text}".strip()
+
+    def _match_score(self, *, query_text: str, post: Post, source_text: str) -> float:
+        query_terms = self._important_terms(query_text)
+        if not query_terms:
+            return 0.0
+
+        source_norm = self._match_normalize(source_text)
+        title_norm = self._match_normalize(post.title)
+        tag_norm = self._match_normalize(" ".join(tag.name for tag in post.tags))
+        searchable_norm = f"{source_norm} {title_norm} {tag_norm}"
+
+        matched_terms = [term for term in query_terms if term in searchable_norm]
+        coverage_score = min(0.3, (len(matched_terms) / max(len(query_terms), 4)) * 0.3)
+        title_score = min(0.22, sum(0.055 for term in query_terms if term in title_norm))
+        tag_score = min(0.18, sum(0.045 for term in query_terms if term in tag_norm))
+        intent_score = self._intent_score(query_text=query_text, card_text=searchable_norm)
+
+        base_score = 0.0
+        if "수원" in self._match_normalize(query_text) and "수원" in searchable_norm:
+            base_score += 0.05
+        if "청년" in self._match_normalize(query_text) and "청년" in searchable_norm:
+            base_score += 0.05
+
+        exact_phrase_score = min(
+            0.12,
+            sum(0.04 for term in matched_terms if len(term) >= 3 and term in title_norm),
+        )
+
+        score = coverage_score + title_score + tag_score + intent_score + base_score + exact_phrase_score
+        return round(max(0.0, min(0.98, score)), 3)
+
+    def _important_terms(self, value: str) -> set[str]:
+        normalized = self._match_normalize(value)
+        words = {
+            word
+            for word in re.findall(r"[a-z0-9]+|[가-힣]{2,}", normalized)
+            if word not in STOP_TERMS and len(word) >= 2
+        }
+        for intent in DOMAIN_INTENTS:
+            for keyword in (*intent["query"], *intent["card"]):
+                if keyword in normalized:
+                    words.add(keyword)
+        return words
+
+    def _intent_score(self, *, query_text: str, card_text: str) -> float:
+        query_norm = self._match_normalize(query_text)
+        score = 0.0
+        for intent in DOMAIN_INTENTS:
+            query_hits = sum(1 for keyword in intent["query"] if keyword in query_norm)
+            if query_hits == 0:
+                continue
+
+            card_hits = sum(1 for keyword in intent["card"] if keyword in card_text)
+            if card_hits == 0:
+                continue
+
+            score += min(0.24, 0.1 + (query_hits * 0.035) + (card_hits * 0.025))
+        return min(0.42, score)
+
+    def _match_normalize(self, value: str) -> str:
+        return re.sub(r"\s+", " ", value.lower()).strip()
 
     def _excerpt(self, value: str) -> str:
         normalized = value.strip().replace("\n", " ")
