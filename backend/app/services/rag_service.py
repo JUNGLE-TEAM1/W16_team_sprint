@@ -35,6 +35,8 @@ class RagService:
             title=payload.title,
             content=payload.content,
             tags=payload.tags,
+            post_type=payload.post_type,
+            region=payload.region,
         )
         try:
             rows = self.rag_index.find_related_posts(
@@ -46,7 +48,7 @@ class RagService:
         except Exception as exc:
             raise AppError(
                 code="RAG_EMBEDDING_FAILED",
-                message="유사 게시글 검색을 위한 embedding 생성에 실패했습니다.",
+                message="관련 지원/시설 검색을 위한 embedding 생성에 실패했습니다.",
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 details={},
             ) from exc

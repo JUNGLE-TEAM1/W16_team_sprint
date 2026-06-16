@@ -11,7 +11,7 @@ export function TagFilter({ tags, selectedTagName, selectedTag, onFilterByTag }:
   return (
     <section className="tag-filter" aria-label="태그 필터">
       <div className="tag-filter-head">
-        <span>태그 필터</span>
+        <span>대상/분야 태그</span>
         {selectedTagName ? <strong>선택됨: #{selectedTagName}</strong> : null}
       </div>
       <div className="tag-row">
@@ -27,7 +27,7 @@ export function TagFilter({ tags, selectedTagName, selectedTag, onFilterByTag }:
             </button>
           ))
         ) : (
-          <span className="muted-text">아직 등록된 태그가 없습니다.</span>
+          <span className="muted-text">아직 등록된 지원 태그가 없습니다.</span>
         )}
       </div>
     </section>

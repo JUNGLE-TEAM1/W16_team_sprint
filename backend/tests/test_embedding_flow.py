@@ -64,6 +64,7 @@ def test_mock_embedding_is_saved_and_regenerated_only_when_post_text_changes() -
             "title": "FastAPI 인증 정리",
             "content": "Session 인증과 JWT 인증 차이를 정리합니다.",
             "tags": ["auth", "fastapi"],
+            "post_type": "policy",
         },
     )
 
@@ -109,7 +110,11 @@ def test_embedding_failure_keeps_post_write_successful_and_marks_failed() -> Non
 
     create_response = client.post(
         "/api/v1/posts",
-        json={"title": "장애 상황 기록", "content": "embedding provider 장애가 발생했습니다."},
+        json={
+            "title": "장애 상황 기록",
+            "content": "embedding provider 장애가 발생했습니다.",
+            "post_type": "policy",
+        },
     )
 
     assert create_response.status_code == 201

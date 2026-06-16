@@ -3,6 +3,10 @@ import type { ChangeEvent, FormEvent } from "react";
 export type AuthView = "login" | "register" | null;
 export type SearchType = "title_content" | "title" | "content" | "author";
 export type SortType = "latest" | "comment_count" | "like_count";
+export type PostType = "policy" | "facility" | "case";
+export type PostVisibility = "public" | "private";
+export type PostCommentPolicy = "none" | "public" | "private";
+export type PostRagScope = "public" | "excluded";
 
 export interface AuthFormState {
   username: string;
@@ -14,6 +18,11 @@ export interface PostFormState {
   title: string;
   content: string;
   tags: string;
+  post_type: PostType;
+  region: string;
+  source_name: string;
+  source_url: string;
+  source_external_id: string;
 }
 
 export interface CommentFormState {
@@ -60,6 +69,14 @@ export interface Post {
   content: string;
   author_id: number;
   author_display_name: string;
+  post_type: PostType;
+  visibility: PostVisibility;
+  comment_policy: PostCommentPolicy;
+  rag_scope: PostRagScope;
+  region: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  source_external_id: string | null;
   comment_count: number;
   like_count: number;
   tags: string[];

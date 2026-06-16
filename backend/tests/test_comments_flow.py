@@ -31,12 +31,12 @@ def register_and_login(client: TestClient, username: str, display_name: str) -> 
     assert login_response.status_code == 200
 
 
-def test_comment_create_list_and_delete_requires_author() -> None:
+def test_support_card_comments_are_disabled() -> None:
     owner = TestClient(app)
     register_and_login(owner, username="owner", display_name="Owner")
     post_response = owner.post(
         "/api/v1/posts",
-        json={"title": "댓글 테스트", "content": "댓글 API 확인"},
+        json={"title": "지원 카드", "content": "공공데이터 기반 지원 정보", "post_type": "policy"},
     )
     assert post_response.status_code == 201
     post_id = post_response.json()["id"]
@@ -47,25 +47,12 @@ def test_comment_create_list_and_delete_requires_author() -> None:
         f"/api/v1/posts/{post_id}/comments",
         json={"content": "좋은 정리입니다."},
     )
-    assert create_response.status_code == 201
-    comment = create_response.json()
-    assert comment["post_id"] == post_id
-    assert comment["author_display_name"] == "Commenter"
+    assert create_response.status_code == 403
+    assert create_response.json()["error"]["code"] == "COMMENTS_DISABLED"
 
     list_response = owner.get(f"/api/v1/posts/{post_id}/comments")
     assert list_response.status_code == 200
-    assert list_response.json()[0]["content"] == "좋은 정리입니다."
-
-    forbidden_delete = owner.delete(f"/api/v1/comments/{comment['id']}")
-    assert forbidden_delete.status_code == 403
-    assert forbidden_delete.json()["error"]["code"] == "COMMENT_FORBIDDEN"
-
-    delete_response = commenter.delete(f"/api/v1/comments/{comment['id']}")
-    assert delete_response.status_code == 204
-
-    after_delete_response = owner.get(f"/api/v1/posts/{post_id}/comments")
-    assert after_delete_response.status_code == 200
-    assert after_delete_response.json() == []
+    assert list_response.json() == []
 
 
 def test_create_comment_requires_session() -> None:
@@ -73,7 +60,7 @@ def test_create_comment_requires_session() -> None:
     register_and_login(owner, username="owner", display_name="Owner")
     post_response = owner.post(
         "/api/v1/posts",
-        json={"title": "댓글 테스트", "content": "댓글 API 확인"},
+        json={"title": "지원 카드", "content": "공공데이터 기반 지원 정보", "post_type": "policy"},
     )
     assert post_response.status_code == 201
 

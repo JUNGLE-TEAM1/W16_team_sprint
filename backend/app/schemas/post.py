@@ -21,6 +21,28 @@ class PostSortType(str, Enum):
     like_count = "like_count"
 
 
+class PostType(str, Enum):
+    policy = "policy"
+    facility = "facility"
+    case = "case"
+
+
+class PostVisibility(str, Enum):
+    public = "public"
+    private = "private"
+
+
+class PostCommentPolicy(str, Enum):
+    none = "none"
+    public = "public"
+    private = "private"
+
+
+class PostRagScope(str, Enum):
+    public = "public"
+    excluded = "excluded"
+
+
 def normalize_tag_names(tags: list[str]) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
@@ -42,17 +64,38 @@ class PostCreate(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     content: str = Field(min_length=1, max_length=10000)
     tags: list[str] = Field(default_factory=list)
+    post_type: PostType = PostType.case
+    region: str | None = Field(default=None, max_length=80)
+    source_name: str | None = Field(default=None, max_length=120)
+    source_url: str | None = Field(default=None, max_length=500)
+    source_external_id: str | None = Field(default=None, max_length=120)
 
     @field_validator("tags")
     @classmethod
     def normalize_tags(cls, tags: list[str]) -> list[str]:
         return normalize_tag_names(tags)
 
+    @field_validator("region", "source_name", "source_url", "source_external_id")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
 
 class PostUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     content: str | None = Field(default=None, min_length=1, max_length=10000)
     tags: list[str] | None = None
+    post_type: PostType | None = None
+    visibility: PostVisibility | None = None
+    comment_policy: PostCommentPolicy | None = None
+    rag_scope: PostRagScope | None = None
+    region: str | None = Field(default=None, max_length=80)
+    source_name: str | None = Field(default=None, max_length=120)
+    source_url: str | None = Field(default=None, max_length=500)
+    source_external_id: str | None = Field(default=None, max_length=120)
 
     @field_validator("tags")
     @classmethod
@@ -60,6 +103,14 @@ class PostUpdate(BaseModel):
         if tags is None:
             return None
         return normalize_tag_names(tags)
+
+    @field_validator("region", "source_name", "source_url", "source_external_id")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
 
 class PostRead(BaseModel):
@@ -70,6 +121,14 @@ class PostRead(BaseModel):
     content: str
     author_id: int
     author_display_name: str
+    post_type: PostType
+    visibility: PostVisibility
+    comment_policy: PostCommentPolicy
+    rag_scope: PostRagScope
+    region: str | None
+    source_name: str | None
+    source_url: str | None
+    source_external_id: str | None
     comment_count: int
     like_count: int
     tags: list[str]

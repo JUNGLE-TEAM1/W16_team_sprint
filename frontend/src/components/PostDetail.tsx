@@ -8,6 +8,7 @@ import type {
   RelatedPostsState,
   User,
 } from "../types";
+import { POST_TYPE_LABELS } from "../constants/board";
 import { formatDate } from "../utils/postFormatting";
 import { RelatedPostsPanel, shouldShowRelatedPostsPanel } from "./RelatedPostsPanel";
 
@@ -24,17 +25,21 @@ function PostEditForm({ editForm, relatedPosts, onChange, onSubmit, onCancel }: 
 
   return (
     <div className={hasRelatedPanel ? "edit-layout has-related" : "edit-layout"}>
-      <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="게시글 수정">
+      <form className="stack-form edit-form" onSubmit={onSubmit} aria-label="카드 또는 상담 케이스 수정">
         <label className="field">
-          <span>Edit title</span>
+          <span>제목 수정</span>
           <input name="title" value={editForm.title} onChange={onChange} />
         </label>
         <label className="field">
-          <span>Edit content</span>
+          <span>내용 수정</span>
           <textarea name="content" value={editForm.content} onChange={onChange} />
         </label>
         <label className="field">
-          <span>Edit tags</span>
+          <span>지역</span>
+          <input name="region" value={editForm.region} onChange={onChange} />
+        </label>
+        <label className="field">
+          <span>태그 수정</span>
           <input name="tags" value={editForm.tags} onChange={onChange} />
         </label>
         <div className="split-actions">
@@ -71,7 +76,7 @@ function CommentsSection({
   return (
     <div className="comments-area">
       <div className="comments-head">
-        <h3>댓글</h3>
+        <h3>상담 메모</h3>
         <span>{comments.length}개</span>
       </div>
 
@@ -92,13 +97,13 @@ function CommentsSection({
           ))}
         </div>
       ) : (
-        <p className="muted-text">아직 댓글이 없습니다.</p>
+        <p className="muted-text">아직 상담 메모가 없습니다.</p>
       )}
 
       {currentUser ? (
         <form className="comment-form" onSubmit={onCreateComment}>
           <label className="field">
-            <span>Comment</span>
+            <span>상담 메모</span>
             <textarea
               name="content"
               value={commentForm.content}
@@ -108,12 +113,12 @@ function CommentsSection({
             />
           </label>
           <button className="submit-button" type="submit">
-            댓글 작성
+            메모 작성
           </button>
         </form>
       ) : (
         <div className="locked-panel compact-lock">
-          <span>댓글 작성은 로그인이 필요합니다.</span>
+          <span>상담 메모 작성은 로그인이 필요합니다.</span>
           <button className="pill-button" type="button" onClick={onShowLogin}>
             로그인
           </button>
@@ -166,25 +171,38 @@ export function PostDetail({
   onDeleteComment: (commentId: number) => void;
   onShowLogin: () => void;
 }) {
+  const canComment = selectedPost.comment_policy !== "none";
+  const isPrivateCase = selectedPost.post_type === "case";
+  const showInterest = selectedPost.visibility === "public";
+
   return (
-    <section className="detail-page" aria-label="게시글 상세">
+    <section className="detail-page" aria-label="지원 정보와 상담 요청 상세">
       <article className="panel detail-panel">
         <div className="section-heading compact-heading">
           <div>
-            <p className="eyebrow">Read</p>
+            <p className="eyebrow">{isPrivateCase ? "Private Matching Request" : "Support Information"}</p>
             <h2>{selectedPost.title}</h2>
           </div>
           <div className="section-actions">
             <button className="ghost-button" type="button" onClick={onBackToList}>
               목록으로
             </button>
-            <button className="ghost-button" type="button" onClick={onRefreshComments}>
-              댓글 새로고침
-            </button>
+            {canComment ? (
+              <button className="ghost-button" type="button" onClick={onRefreshComments}>
+                메모 새로고침
+              </button>
+            ) : null}
           </div>
         </div>
 
         <div className="post-detail">
+          <div className="detail-badges">
+            <span>{POST_TYPE_LABELS[selectedPost.post_type]}</span>
+            {selectedPost.region ? <span>{selectedPost.region}</span> : null}
+            {selectedPost.source_name ? <span>{selectedPost.source_name}</span> : null}
+            {selectedPost.visibility === "private" ? <span>비공개</span> : null}
+            {selectedPost.rag_scope === "excluded" ? <span>RAG 제외</span> : null}
+          </div>
           <p>{selectedPost.content}</p>
           <div className="card-tags">
             {(selectedPost.tags ?? []).map((tag) => (
@@ -195,17 +213,24 @@ export function PostDetail({
             <span>{formatDate(selectedPost.created_at)}</span>
             <span>by {selectedPost.author_display_name}</span>
           </div>
+          {selectedPost.source_url ? (
+            <a className="reference-link" href={selectedPost.source_url} target="_blank" rel="noreferrer">
+              원문 출처 열기
+            </a>
+          ) : null}
           <div className="card-stats detail-stats">
-            <span>댓글 {selectedPost.comment_count ?? comments.length}개</span>
-            <span>좋아요 {selectedPost.like_count ?? 0}개</span>
+            {canComment ? <span>상담 메모 {selectedPost.comment_count ?? comments.length}개</span> : null}
+            {showInterest ? <span>관심 {selectedPost.like_count ?? 0}개</span> : null}
           </div>
-          <div className="like-actions">
-            <button className="like-button" type="button" onClick={onLikePost}>
-              좋아요
-            </button>
-          </div>
+          {showInterest ? (
+            <div className="like-actions">
+              <button className="like-button" type="button" onClick={onLikePost}>
+                관심 등록
+              </button>
+            </div>
+          ) : null}
           {isAuthor ? (
-            <div className="detail-actions" aria-label="게시글 관리">
+            <div className="detail-actions" aria-label="카드 또는 상담 케이스 관리">
               <button className="ghost-button" type="button" onClick={onOpenEditor}>
                 수정
               </button>
@@ -226,15 +251,26 @@ export function PostDetail({
           />
         ) : null}
 
-        <CommentsSection
-          comments={comments}
-          currentUser={currentUser}
-          commentForm={commentForm}
-          onCommentChange={onCommentChange}
-          onCreateComment={onCreateComment}
-          onDeleteComment={onDeleteComment}
-          onShowLogin={onShowLogin}
-        />
+        {canComment ? (
+          <CommentsSection
+            comments={comments}
+            currentUser={currentUser}
+            commentForm={commentForm}
+            onCommentChange={onCommentChange}
+            onCreateComment={onCreateComment}
+            onDeleteComment={onDeleteComment}
+            onShowLogin={onShowLogin}
+          />
+        ) : (
+          <div className="locked-panel inline-empty">
+            <strong>{isPrivateCase ? "이 상담 요청은 본인만 확인할 수 있습니다." : "지원 정보에는 상담 메모를 받지 않습니다."}</strong>
+            <span>
+              {isPrivateCase
+                ? "개인정보 보호를 위해 공용 RAG 지식베이스에도 저장하지 않습니다."
+                : "공식 정보와 개인 의견이 섞이지 않도록 출처 확인과 관심 등록만 제공합니다."}
+            </span>
+          </div>
+        )}
       </article>
     </section>
   );

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from backend.app.api.dependencies import get_post_service
-from backend.app.api.v1.auth import get_session_user
+from backend.app.api.v1.auth import get_optional_session_user, get_session_user
 from backend.app.models.user import User
 from backend.app.schemas.post import PostCreate, PostPage, PostRead, PostSearchType, PostSortType, PostUpdate
 from backend.app.services.post_service import PostService
@@ -31,12 +31,23 @@ def list_posts(
     return service.list(q=q, search_type=search_type, tag=tag, sort=sort, page=page, size=size)
 
 
+@router.get("/my-consultations", response_model=PostPage)
+def list_my_consultations(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=9, ge=1, le=50),
+    current_user: User = Depends(get_session_user),
+    service: PostService = Depends(get_post_service),
+) -> PostPage:
+    return service.list_my_consultations(author_id=current_user.id, page=page, size=size)
+
+
 @router.get("/{post_id}", response_model=PostRead)
 def get_post(
     post_id: int,
+    current_user: User | None = Depends(get_optional_session_user),
     service: PostService = Depends(get_post_service),
 ) -> PostRead:
-    return service.get(post_id)
+    return service.get(post_id, viewer_id=current_user.id if current_user else None)
 
 
 @router.patch("/{post_id}", response_model=PostRead)

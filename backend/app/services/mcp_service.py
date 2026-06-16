@@ -100,7 +100,7 @@ class McpService:
             "protocolVersion": "2025-06-18",
             "capabilities": {"tools": {}},
             "serverInfo": {
-                "name": "ai-knowledge-board-mcp",
+                "name": "life-support-board-mcp",
                 "version": "0.1.0",
             },
         }
@@ -108,7 +108,7 @@ class McpService:
     def _search_external_references_tool(self) -> dict[str, Any]:
         return {
             "name": SEARCH_EXTERNAL_REFERENCES_TOOL,
-            "description": "작성 중인 게시글의 제목, 본문, 태그를 바탕으로 외부 개발 참고자료를 검색합니다.",
+            "description": "작성 중인 상담 케이스의 제목, 본문, 태그, 지역을 바탕으로 외부 참고자료를 검색합니다.",
             "inputSchema": ExternalReferenceSearchArguments.model_json_schema(),
         }
 

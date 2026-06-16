@@ -41,11 +41,11 @@ export function ComposeModal({
 
   return (
     <div className="modal-backdrop">
-      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="새 게시글 작성">
+      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="내 상황으로 지원 찾기">
         <div className="section-heading compact-heading">
           <div>
-            <p className="eyebrow">Write</p>
-            <h2>새 게시글 작성</h2>
+            <p className="eyebrow">Private Matching Request</p>
+            <h2>내 상황으로 지원 찾기</h2>
           </div>
           <button className="ghost-button" type="button" onClick={onClose}>
             닫기
@@ -55,11 +55,11 @@ export function ComposeModal({
         <div className={hasSidePanel ? "compose-layout has-related" : "compose-layout"}>
           <form className="stack-form" onSubmit={onSubmit}>
             <label className="field">
-              <span>Title</span>
+              <span>요청 제목</span>
               <input name="title" value={postForm.title} onChange={onChange} maxLength={120} required />
             </label>
             <label className="field">
-              <span>Content</span>
+              <span>내 상황</span>
               <textarea
                 name="content"
                 value={postForm.content}
@@ -69,12 +69,22 @@ export function ComposeModal({
               />
             </label>
             <label className="field">
-              <span>Tags</span>
+              <span>지역</span>
+              <input
+                name="region"
+                value={postForm.region}
+                onChange={onChange}
+                maxLength={80}
+                placeholder="서울, 마포구"
+              />
+            </label>
+            <label className="field">
+              <span>관심 태그</span>
               <input
                 name="tags"
                 value={postForm.tags}
                 onChange={onChange}
-                placeholder="fastapi, auth, sprint"
+                placeholder="청년, 주거, 취업, 서울"
               />
             </label>
             <div className="compose-ai-actions">
@@ -88,7 +98,7 @@ export function ComposeModal({
               </button>
             </div>
             <button className="submit-button" type="submit">
-              게시글 작성
+              내 상담 요청 저장
             </button>
           </form>
           <div className="compose-side-panels">

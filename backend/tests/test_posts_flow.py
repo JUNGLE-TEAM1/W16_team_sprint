@@ -49,6 +49,7 @@ def test_create_list_and_get_post() -> None:
             "title": "스프린트 1",
             "content": "API와 DB 흐름",
             "tags": [" FastAPI ", "auth", "fastapi"],
+            "post_type": "policy",
         },
     )
 
@@ -58,6 +59,10 @@ def test_create_list_and_get_post() -> None:
     assert created_post["title"] == "스프린트 1"
     assert created_post["author_id"] == 1
     assert created_post["author_display_name"] == "Team One"
+    assert created_post["post_type"] == "policy"
+    assert created_post["visibility"] == "public"
+    assert created_post["comment_policy"] == "none"
+    assert created_post["rag_scope"] == "public"
     assert created_post["comment_count"] == 0
     assert created_post["like_count"] == 0
     assert created_post["tags"] == ["auth", "fastapi"]
@@ -80,6 +85,7 @@ def test_create_list_and_get_post() -> None:
     assert get_response.status_code == 200
     assert get_response.json()["content"] == "API와 DB 흐름"
     assert get_response.json()["author_display_name"] == "Team One"
+    assert get_response.json()["visibility"] == "public"
     assert get_response.json()["comment_count"] == 0
     assert get_response.json()["like_count"] == 0
     assert get_response.json()["tags"] == ["auth", "fastapi"]
@@ -87,6 +93,90 @@ def test_create_list_and_get_post() -> None:
     tags_response = client.get("/api/v1/tags")
     assert tags_response.status_code == 200
     assert [tag["name"] for tag in tags_response.json()] == ["auth", "fastapi"]
+
+
+def test_create_post_supports_life_support_metadata() -> None:
+    client = TestClient(app)
+    register_and_login(client)
+
+    create_response = client.post(
+        "/api/v1/posts",
+        json={
+            "title": "[청년/주거] 서울시 청년월세 지원",
+            "content": "지원대상: 서울 거주 청년. 지원내용: 월세 지원.",
+            "tags": ["청년", "주거", "서울"],
+            "post_type": "policy",
+            "region": "서울",
+            "source_name": "서울 열린데이터광장",
+            "source_url": "https://data.seoul.go.kr",
+            "source_external_id": "seoul-policy-001",
+        },
+    )
+
+    assert create_response.status_code == 201
+    created_post = create_response.json()
+    assert created_post["post_type"] == "policy"
+    assert created_post["visibility"] == "public"
+    assert created_post["comment_policy"] == "none"
+    assert created_post["rag_scope"] == "public"
+    assert created_post["region"] == "서울"
+    assert created_post["source_name"] == "서울 열린데이터광장"
+    assert created_post["source_url"] == "https://data.seoul.go.kr"
+    assert created_post["source_external_id"] == "seoul-policy-001"
+
+    list_response = client.get("/api/v1/posts")
+    assert list_response.status_code == 200
+    listed_post = list_response.json()["items"][0]
+    assert listed_post["post_type"] == "policy"
+    assert listed_post["region"] == "서울"
+    assert listed_post["source_name"] == "서울 열린데이터광장"
+
+
+def test_consultation_request_is_private_and_excluded_from_public_list() -> None:
+    owner = TestClient(app)
+    register_and_login(owner, username="owner", display_name="Owner")
+
+    create_response = owner.post(
+        "/api/v1/posts",
+        json={
+            "title": "서울 청년 월세 지원 찾기",
+            "content": "서울에 거주하는 취준생이고 월세 부담이 큽니다.",
+            "tags": ["청년", "주거", "서울"],
+        },
+    )
+
+    assert create_response.status_code == 201
+    consultation = create_response.json()
+    assert consultation["post_type"] == "case"
+    assert consultation["visibility"] == "private"
+    assert consultation["comment_policy"] == "none"
+    assert consultation["rag_scope"] == "excluded"
+
+    list_response = owner.get("/api/v1/posts")
+    assert list_response.status_code == 200
+    assert list_response.json()["total"] == 0
+
+    my_response = owner.get("/api/v1/posts/my-consultations")
+    assert my_response.status_code == 200
+    assert my_response.json()["total"] == 1
+    assert my_response.json()["items"][0]["id"] == consultation["id"]
+
+    anonymous = TestClient(app)
+    anonymous_get = anonymous.get(f"/api/v1/posts/{consultation['id']}")
+    assert anonymous_get.status_code == 404
+
+    other = TestClient(app)
+    register_and_login(other, username="other", display_name="Other")
+    other_get = other.get(f"/api/v1/posts/{consultation['id']}")
+    assert other_get.status_code == 404
+
+    owner_get = owner.get(f"/api/v1/posts/{consultation['id']}")
+    assert owner_get.status_code == 200
+    assert owner_get.json()["id"] == consultation["id"]
+
+    like_response = owner.post(f"/api/v1/posts/{consultation['id']}/like")
+    assert like_response.status_code == 403
+    assert like_response.json()["error"]["code"] == "POST_LIKE_DISABLED"
 
 
 def test_create_post_requires_session() -> None:
@@ -106,7 +196,7 @@ def test_update_and_delete_post_requires_author() -> None:
     register_and_login(owner, username="owner", display_name="Owner")
     create_response = owner.post(
         "/api/v1/posts",
-        json={"title": "원본 제목", "content": "원본 내용"},
+        json={"title": "원본 제목", "content": "원본 내용", "post_type": "policy"},
     )
     assert create_response.status_code == 201
     post_id = create_response.json()["id"]
@@ -133,7 +223,8 @@ def test_update_and_delete_post_requires_author() -> None:
         f"/api/v1/posts/{post_id}/comments",
         json={"content": "삭제될 댓글"},
     )
-    assert comment_response.status_code == 201
+    assert comment_response.status_code == 403
+    assert comment_response.json()["error"]["code"] == "COMMENTS_DISABLED"
     like_response = owner.post(f"/api/v1/posts/{post_id}/like")
     assert like_response.status_code == 200
 
@@ -160,16 +251,19 @@ def test_list_posts_supports_search_tag_filter_and_pagination() -> None:
             "title": "Session 인증 정리",
             "content": "쿠키와 서버 세션을 설명합니다.",
             "tags": ["auth", "session"],
+            "post_type": "policy",
         },
         {
             "title": "React 상태 관리",
             "content": "client state와 server state를 구분합니다.",
             "tags": ["react"],
+            "post_type": "policy",
         },
         {
             "title": "PostgreSQL ILIKE 검색",
             "content": "제목과 본문 검색을 구현합니다.",
             "tags": ["db", "search"],
+            "post_type": "policy",
         },
     ]
     for post in posts:
@@ -217,7 +311,7 @@ def test_get_missing_post_returns_common_error_shape() -> None:
     assert response.json() == {
         "error": {
             "code": "POST_NOT_FOUND",
-            "message": "게시글을 찾을 수 없습니다.",
+            "message": "지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
             "details": {"post_id": 999},
         }
     }
@@ -228,7 +322,7 @@ def test_like_post_requires_session_and_ignores_duplicate_like() -> None:
     register_and_login(client, username="owner", display_name="Owner")
     create_response = client.post(
         "/api/v1/posts",
-        json={"title": "좋아요 테스트", "content": "좋아요 버튼 확인"},
+        json={"title": "좋아요 테스트", "content": "좋아요 버튼 확인", "post_type": "policy"},
     )
     assert create_response.status_code == 201
     post_id = create_response.json()["id"]
@@ -267,15 +361,15 @@ def test_list_posts_supports_comment_and_like_sorting() -> None:
 
     first_response = client.post(
         "/api/v1/posts",
-        json={"title": "댓글 적은 글", "content": "댓글 하나"},
+        json={"title": "관심 적은 지원", "content": "관심 하나", "post_type": "policy"},
     )
     second_response = client.post(
         "/api/v1/posts",
-        json={"title": "댓글 많은 글", "content": "댓글 둘"},
+        json={"title": "관심 중간 지원", "content": "관심 둘", "post_type": "policy"},
     )
     third_response = client.post(
         "/api/v1/posts",
-        json={"title": "좋아요 많은 글", "content": "좋아요 정렬"},
+        json={"title": "관심 많은 지원", "content": "관심 정렬", "post_type": "policy"},
     )
     assert first_response.status_code == 201
     assert second_response.status_code == 201
@@ -284,10 +378,6 @@ def test_list_posts_supports_comment_and_like_sorting() -> None:
     first_id = first_response.json()["id"]
     second_id = second_response.json()["id"]
     third_id = third_response.json()["id"]
-
-    assert client.post(f"/api/v1/posts/{first_id}/comments", json={"content": "댓글 1"}).status_code == 201
-    assert client.post(f"/api/v1/posts/{second_id}/comments", json={"content": "댓글 1"}).status_code == 201
-    assert client.post(f"/api/v1/posts/{second_id}/comments", json={"content": "댓글 2"}).status_code == 201
 
     with Session(engine) as db:
         first_post = db.get(Post, first_id)
@@ -303,9 +393,7 @@ def test_list_posts_supports_comment_and_like_sorting() -> None:
 
     comment_sort_response = client.get("/api/v1/posts?sort=comment_count")
     assert comment_sort_response.status_code == 200
-    comment_sorted_items = comment_sort_response.json()["items"]
-    assert [item["id"] for item in comment_sorted_items[:3]] == [second_id, first_id, third_id]
-    assert comment_sorted_items[0]["comment_count"] == 2
+    assert all(item["comment_count"] == 0 for item in comment_sort_response.json()["items"])
 
     like_sort_response = client.get("/api/v1/posts?sort=like_count")
     assert like_sort_response.status_code == 200

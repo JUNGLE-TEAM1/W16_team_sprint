@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -30,6 +32,12 @@ class PostRepository:
         comment_count = self._comment_count_expression()
         statement = select(Post, comment_count.label("comment_count")).join(Post.author)
         count_statement = select(func.count(func.distinct(Post.id))).select_from(Post).join(Post.author)
+        support_conditions = [
+            Post.visibility == "public",
+            Post.post_type.in_(["policy", "facility"]),
+        ]
+        statement = statement.where(*support_conditions)
+        count_statement = count_statement.where(*support_conditions)
 
         if tag:
             statement = statement.join(Post.tag_entities)
@@ -82,6 +90,34 @@ class PostRepository:
         post, comment_count_value = row
         post.comment_count = int(comment_count_value)
         return post
+
+    def list_private_cases_by_author(
+        self,
+        author_id: int,
+        page: int,
+        size: int,
+    ) -> tuple[list[Post], int]:
+        comment_count = self._comment_count_expression()
+        conditions = [
+            Post.author_id == author_id,
+            Post.post_type == "case",
+            Post.visibility == "private",
+        ]
+        statement = (
+            select(Post, comment_count.label("comment_count"))
+            .options(joinedload(Post.author), joinedload(Post.tag_entities))
+            .where(*conditions)
+            .order_by(Post.created_at.desc(), Post.id.desc())
+            .offset((page - 1) * size)
+            .limit(size)
+        )
+        count_statement = select(func.count(Post.id)).where(*conditions)
+        rows = self.db.execute(statement).unique().all()
+        posts = []
+        for post, comment_count_value in rows:
+            post.comment_count = int(comment_count_value)
+            posts.append(post)
+        return posts, self.db.scalar(count_statement) or 0
 
     def delete(self, post: Post) -> None:
         self.db.delete(post)

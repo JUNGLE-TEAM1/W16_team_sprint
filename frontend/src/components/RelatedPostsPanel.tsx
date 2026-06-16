@@ -35,7 +35,7 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
       });
       const data = (await response.json()) as Post;
       if (!response.ok) {
-        throw new Error("게시글 본문을 불러오지 못했습니다.");
+        throw new Error("지원 카드 상세를 불러오지 못했습니다.");
       }
       setPreviewPost(data);
       setPreviewStatus({ postId, isLoading: false, errorText: "" });
@@ -43,7 +43,7 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
       setPreviewStatus({
         postId,
         isLoading: false,
-        errorText: "게시글 본문을 불러오지 못했습니다.",
+        errorText: "지원 카드 상세를 불러오지 못했습니다.",
       });
     }
   }
@@ -56,13 +56,13 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
   const shouldShowPreview = previewPost || previewStatus.isLoading || previewStatus.errorText;
 
   return (
-    <aside className="related-panel" aria-label="유사 게시글 추천">
+    <aside className="related-panel" aria-label="관련 지원과 시설 추천">
       <div className="related-panel-head">
         <p className="eyebrow">RAG</p>
-        <h3>유사 게시글</h3>
+        <h3>관련 지원/시설</h3>
       </div>
 
-      {state.isLoading ? <p className="related-loading">유사글 찾는 중</p> : null}
+      {state.isLoading ? <p className="related-loading">관련 지원을 찾는 중</p> : null}
 
       {state.items.length > 0 ? (
         <div className="related-list">
@@ -104,15 +104,15 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
           <article className="related-preview-modal">
             <div className="section-heading compact-heading">
               <div>
-                <p className="eyebrow">Related Post</p>
-                <h2>{previewPost?.title || "게시글 불러오는 중"}</h2>
+                <p className="eyebrow">Related Support</p>
+                <h2>{previewPost?.title || "지원 카드 불러오는 중"}</h2>
               </div>
               <button className="ghost-button" type="button" onClick={closePostPreview}>
                 닫기
               </button>
             </div>
 
-            {previewStatus.isLoading ? <p className="muted-text">본문을 불러오는 중입니다.</p> : null}
+            {previewStatus.isLoading ? <p className="muted-text">상세 내용을 불러오는 중입니다.</p> : null}
             {previewStatus.errorText ? <p className="muted-text">{previewStatus.errorText}</p> : null}
             {previewPost ? (
               <div className="related-preview-content">
@@ -123,8 +123,8 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
                 </div>
                 <p>{previewPost.content}</p>
                 <div className="card-meta">
-                  <span>by {previewPost.author_display_name}</span>
-                  <span>댓글 {previewPost.comment_count}개</span>
+                  <span>{previewPost.source_name || `by ${previewPost.author_display_name}`}</span>
+                  {previewPost.region ? <span>{previewPost.region}</span> : null}
                 </div>
               </div>
             ) : null}

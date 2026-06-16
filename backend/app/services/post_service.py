@@ -38,7 +38,9 @@ class PostService:
         self.rag_index = rag_index
 
     def create(self, payload: PostCreate, author_id: int) -> Post:
-        post = Post(**payload.model_dump(exclude={"tags"}), author_id=author_id)
+        data = payload.model_dump(exclude={"tags"})
+        data.update(self._default_policy_for_type(payload.post_type))
+        post = Post(**data, author_id=author_id)
         post.tag_entities = self._get_tags(payload.tags)
         saved_post = self.posts.create(post)
         self._sync_embedding(saved_post)
@@ -72,24 +74,41 @@ class PostService:
             total_pages=ceil(total / size) if total else 0,
         )
 
-    def get(self, post_id: int) -> Post:
+    def list_my_consultations(self, author_id: int, page: int, size: int) -> PostPage:
+        posts, total = self.posts.list_private_cases_by_author(
+            author_id=author_id,
+            page=page,
+            size=size,
+        )
+        return PostPage(
+            items=posts,
+            page=page,
+            size=size,
+            total=total,
+            total_pages=ceil(total / size) if total else 0,
+        )
+
+    def get(self, post_id: int, viewer_id: int | None = None) -> Post:
         post = self.posts.get(post_id)
-        if post is None:
+        if post is None or not self._can_view(post, viewer_id):
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="게시글을 찾을 수 없습니다.",
+                message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )
         return post
 
     def update(self, post_id: int, payload: PostUpdate, author_id: int) -> Post:
-        post = self.get(post_id)
+        post = self.posts.get(post_id)
+        if post is None:
+            raise self._not_found(post_id)
         self._ensure_author(post, author_id)
         before_embedding_hash = self._build_embedding_hash(post)
 
         changes = payload.model_dump(exclude_unset=True)
         tag_names = changes.pop("tags", None)
+        changes.update(self._default_policy_for_type(changes.get("post_type", post.post_type)))
         for field, value in changes.items():
             setattr(post, field, value)
         if tag_names is not None:
@@ -97,12 +116,21 @@ class PostService:
 
         if self._embedding_content_changed(post, before_embedding_hash):
             self._sync_embedding(post)
+        elif not self._is_rag_indexable(post):
+            self._delete_embedding(post.id)
         self.db.commit()
         self.db.refresh(post)
         return post
 
     def like(self, post_id: int, user_id: int) -> Post:
-        post = self.get(post_id)
+        post = self.get(post_id, viewer_id=user_id)
+        if post.visibility != "public":
+            raise AppError(
+                code="POST_LIKE_DISABLED",
+                message="비공개 상담 요청에는 관심 등록을 할 수 없습니다.",
+                status_code=status.HTTP_403_FORBIDDEN,
+                details={"post_id": post_id},
+            )
         if self.db.get(PostLike, {"post_id": post_id, "user_id": user_id}) is not None:
             return post
 
@@ -115,7 +143,9 @@ class PostService:
         return self.get(post_id)
 
     def delete(self, post_id: int, author_id: int) -> None:
-        post = self.get(post_id)
+        post = self.posts.get(post_id)
+        if post is None:
+            raise self._not_found(post_id)
         self._ensure_author(post, author_id)
         self._delete_embedding(post.id)
         self.posts.delete(post)
@@ -126,10 +156,40 @@ class PostService:
         if post.author_id != user_id:
             raise AppError(
                 code="POST_FORBIDDEN",
-                message="게시글 작성자만 수정하거나 삭제할 수 있습니다.",
+                message="작성자만 수정하거나 삭제할 수 있습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"post_id": post.id},
             )
+
+    @staticmethod
+    def _not_found(post_id: int) -> AppError:
+        return AppError(
+            code="POST_NOT_FOUND",
+            message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            details={"post_id": post_id},
+        )
+
+    @staticmethod
+    def _default_policy_for_type(post_type: object) -> dict[str, str]:
+        normalized_type = str(getattr(post_type, "value", post_type))
+        if normalized_type in {"policy", "facility"}:
+            return {
+                "visibility": "public",
+                "comment_policy": "none",
+                "rag_scope": "public",
+            }
+        return {
+            "visibility": "private",
+            "comment_policy": "none",
+            "rag_scope": "excluded",
+        }
+
+    @staticmethod
+    def _can_view(post: Post, viewer_id: int | None) -> bool:
+        if post.visibility == "public":
+            return True
+        return viewer_id is not None and post.author_id == viewer_id
 
     def _get_tags(self, tag_names: list[str]) -> list:
         if not tag_names:
@@ -140,6 +200,9 @@ class PostService:
 
     def _sync_embedding(self, post: Post) -> None:
         if self.embeddings is None or self.embedding_service is None:
+            return
+        if not self._is_rag_indexable(post):
+            self._delete_embedding(post.id)
             return
 
         content_snapshot = self.embedding_service.build_post_text(post)
@@ -180,7 +243,7 @@ class PostService:
             logger.warning("Post vector index delete failed for post_id=%s: %s", post_id, exc)
 
     def _build_embedding_hash(self, post: Post) -> str | None:
-        if self.embedding_service is None:
+        if self.embedding_service is None or not self._is_rag_indexable(post):
             return None
         content_snapshot = self.embedding_service.build_post_text(post)
         return self.embedding_service.build_content_hash(content_snapshot)
@@ -190,3 +253,11 @@ class PostService:
             return False
         current_hash = self._build_embedding_hash(post)
         return current_hash != previous_hash
+
+    @staticmethod
+    def _is_rag_indexable(post: Post) -> bool:
+        return (
+            post.visibility == "public"
+            and post.rag_scope == "public"
+            and post.post_type in {"policy", "facility"}
+        )

@@ -107,17 +107,36 @@ class PostEmbeddingService:
         self.dimensions = dimensions
 
     def build_post_text(self, post: Post) -> str:
-        return self.build_text(title=post.title, content=post.content, tags=post.tags)
-
-    def build_text(self, title: str, content: str, tags: Sequence[str]) -> str:
-        tag_text = ", ".join(sorted(tag.strip().lower() for tag in tags if tag.strip()))
-        return "\n".join(
-            [
-                f"title: {title.strip()}",
-                f"content: {content.strip()}",
-                f"tags: {tag_text}",
-            ]
+        return self.build_text(
+            title=post.title,
+            content=post.content,
+            tags=post.tags,
+            post_type=post.post_type,
+            region=post.region,
+            source_name=post.source_name,
         )
+
+    def build_text(
+        self,
+        title: str,
+        content: str,
+        tags: Sequence[str],
+        post_type: str | None = None,
+        region: str | None = None,
+        source_name: str | None = None,
+    ) -> str:
+        tag_text = ", ".join(sorted(tag.strip().lower() for tag in tags if tag.strip()))
+        lines = [
+            f"type: {(post_type or 'case').strip()}",
+            f"title: {title.strip()}",
+            f"content: {content.strip()}",
+            f"tags: {tag_text}",
+        ]
+        if region and region.strip():
+            lines.append(f"region: {region.strip()}")
+        if source_name and source_name.strip():
+            lines.append(f"source: {source_name.strip()}")
+        return "\n".join(lines)
 
     def build_content_hash(self, text: str) -> str:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -127,6 +146,12 @@ class PostEmbeddingService:
             "title": post.title,
             "tags": post.tags,
             "author_id": post.author_id,
+            "post_type": post.post_type,
+            "visibility": post.visibility,
+            "rag_scope": post.rag_scope,
+            "region": post.region,
+            "source_name": post.source_name,
+            "source_external_id": post.source_external_id,
         }
 
     def embed(self, text: str) -> list[float]:

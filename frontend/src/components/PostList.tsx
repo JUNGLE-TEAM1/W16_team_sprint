@@ -1,4 +1,4 @@
-import { CARD_THEMES, SORT_TYPES } from "../constants/board";
+import { CARD_THEMES, POST_TYPE_LABELS, SORT_TYPES } from "../constants/board";
 import type { KeyboardEvent } from "react";
 import type { FieldChangeHandler, PageMeta, Post, SearchState } from "../types";
 import { excerpt, formatDate } from "../utils/postFormatting";
@@ -31,6 +31,10 @@ function PostCard({ post, index, pageMeta, onSelectPost }: PostCardProps) {
         <strong>{post.title.slice(0, 1).toUpperCase()}</strong>
       </div>
       <div className="card-body">
+        <div className="card-kind-row">
+          <span className={`type-badge type-${post.post_type}`}>{POST_TYPE_LABELS[post.post_type]}</span>
+          {post.region ? <span className="region-badge">{post.region}</span> : null}
+        </div>
         <h3>{post.title}</h3>
         <p>{excerpt(post.content)}</p>
         <div className="card-tags">
@@ -39,12 +43,11 @@ function PostCard({ post, index, pageMeta, onSelectPost }: PostCardProps) {
           ))}
         </div>
         <div className="card-stats">
-          <span>댓글 {post.comment_count ?? 0}개</span>
-          <span>좋아요 {post.like_count ?? 0}개</span>
+          <span>관심 {post.like_count ?? 0}개</span>
         </div>
         <div className="card-meta">
           <span>{formatDate(post.created_at)}</span>
-          <span>by {post.author_display_name}</span>
+          <span>{post.source_name || `by ${post.author_display_name}`}</span>
         </div>
       </div>
     </article>
@@ -69,11 +72,11 @@ export function PostList({
   onChangePage: (nextPage: number) => void;
 }) {
   return (
-    <section className="posts-section" aria-label="게시글 목록">
+    <section className="posts-section" aria-label="지원 정보 목록">
       <div className="section-heading list-heading">
         <div>
-          <p className="eyebrow">Latest Posts</p>
-          <h2>현재까지 작성된 게시글</h2>
+          <p className="eyebrow">Support Information</p>
+          <h2>지원 정보</h2>
         </div>
         <div className="section-actions">
           <span className="count-chip">
@@ -90,7 +93,7 @@ export function PostList({
             </select>
           </label>
           <button className="submit-button compact-button" type="button" onClick={onOpenCompose}>
-            새 글 작성
+            내 상황으로 지원 찾기
           </button>
         </div>
       </div>
@@ -109,8 +112,8 @@ export function PostList({
         </div>
       ) : (
         <div className="empty-state">
-          <strong>조건에 맞는 게시글이 없습니다.</strong>
-          <span>검색어 또는 태그 필터를 조정해보세요.</span>
+          <strong>조건에 맞는 지원 카드가 없습니다.</strong>
+          <span>검색어, 지역, 태그 필터를 조정해보세요.</span>
         </div>
       )}
 

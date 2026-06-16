@@ -94,7 +94,12 @@ class LangChainPostVectorIndex:
         statement = (
             select(Post)
             .options(joinedload(Post.tag_entities))
-            .where(Post.id.in_(score_by_post_id.keys()))
+            .where(
+                Post.id.in_(score_by_post_id.keys()),
+                Post.visibility == "public",
+                Post.rag_scope == "public",
+                Post.post_type.in_(["policy", "facility"]),
+            )
         )
         posts = {
             post.id: post
@@ -129,6 +134,12 @@ class LangChainPostVectorIndex:
                 "title": post.title,
                 "tags": post.tags,
                 "author_id": post.author_id,
+                "post_type": post.post_type,
+                "visibility": post.visibility,
+                "rag_scope": post.rag_scope,
+                "region": post.region,
+                "source_name": post.source_name,
+                "source_external_id": post.source_external_id,
             },
         )
 

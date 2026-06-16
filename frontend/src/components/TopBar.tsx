@@ -18,8 +18,8 @@ export function TopBar({
   return (
     <header className="topbar">
       <button className="brand-button" type="button" onClick={onLogoClick}>
-        <span className="brand-symbol">AI</span>
-        <span>지식 공유 게시판</span>
+        <span className="brand-symbol">복지</span>
+        <span>AI 생활지원 매칭 보드</span>
       </button>
 
       <nav className="top-actions" aria-label="계정 메뉴">

@@ -30,7 +30,7 @@ export function useComments({
 }: UseCommentsOptions) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentForm, setCommentForm] = useState<CommentFormState>({
-    content: "좋은 정리입니다.",
+    content: "추가로 확인할 조건을 남깁니다.",
   });
 
   function updateCommentForm(event: FieldChangeEvent) {
@@ -50,7 +50,7 @@ export function useComments({
     }
     const result = await request<Comment[]>(`/api/v1/posts/${postId}/comments`, {
       quiet: options.quiet,
-      successMessage: "댓글을 불러왔습니다.",
+      successMessage: "상담 메모를 불러왔습니다.",
     });
     if (result.ok && Array.isArray(result.data)) {
       setComments(result.data);
@@ -63,18 +63,18 @@ export function useComments({
   async function createComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentUser) {
-      onAuthRequired("댓글 작성은 로그인이 필요합니다.");
+      onAuthRequired("상담 메모 작성은 로그인이 필요합니다.");
       return false;
     }
     if (!selectedPostId) {
-      setStatus({ text: "댓글을 작성할 게시글을 선택하세요.", isError: true });
+      setStatus({ text: "상담 메모를 작성할 카드나 케이스를 선택하세요.", isError: true });
       return false;
     }
 
     const result = await request<Comment>(`/api/v1/posts/${selectedPostId}/comments`, {
       method: "POST",
       body: JSON.stringify(commentForm),
-      successMessage: "댓글을 작성했습니다.",
+      successMessage: "상담 메모를 작성했습니다.",
     });
     if (result.ok) {
       setCommentForm({ content: "" });
@@ -87,7 +87,7 @@ export function useComments({
   async function deleteComment(commentId: number) {
     const result = await request<Record<string, never>>(`/api/v1/comments/${commentId}`, {
       method: "DELETE",
-      successMessage: "댓글을 삭제했습니다.",
+      successMessage: "상담 메모를 삭제했습니다.",
     });
     if (result.ok && selectedPostId) {
       await loadComments(selectedPostId, { quiet: true });

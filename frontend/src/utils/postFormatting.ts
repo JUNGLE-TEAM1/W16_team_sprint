@@ -33,6 +33,11 @@ export function buildPostBody(form: PostFormState) {
     title: form.title,
     content: form.content,
     tags: parseTags(form.tags),
+    post_type: form.post_type,
+    region: emptyToNull(form.region),
+    source_name: emptyToNull(form.source_name),
+    source_url: emptyToNull(form.source_url),
+    source_external_id: emptyToNull(form.source_external_id),
   });
 }
 
@@ -41,6 +46,8 @@ export function buildRelatedPostsPayload(form: PostFormState, excludePostId?: nu
     title: form.title.trim(),
     content: form.content.trim(),
     tags: parseTags(form.tags),
+    post_type: form.post_type,
+    region: emptyToNull(form.region),
     exclude_post_id: excludePostId ?? null,
   };
 }
@@ -50,8 +57,15 @@ export function buildExternalReferencesPayload(form: PostFormState) {
     title: form.title.trim(),
     content: form.content.trim(),
     tags: parseTags(form.tags),
+    post_type: form.post_type,
+    region: emptyToNull(form.region),
     limit: 3,
   };
+}
+
+function emptyToNull(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 export function buildPostQuery(nextSearch: SearchState) {

@@ -69,6 +69,7 @@ def create_post(client: TestClient, title: str, content: str, tags: list[str] | 
             "title": title,
             "content": content,
             "tags": tags or [],
+            "post_type": "policy",
         },
     )
     assert response.status_code == 201
@@ -194,7 +195,7 @@ def test_related_posts_returns_rag_embedding_failed_when_query_embedding_fails()
     assert response.json() == {
         "error": {
             "code": "RAG_EMBEDDING_FAILED",
-            "message": "유사 게시글 검색을 위한 embedding 생성에 실패했습니다.",
+            "message": "관련 지원/시설 검색을 위한 embedding 생성에 실패했습니다.",
             "details": {},
         }
     }

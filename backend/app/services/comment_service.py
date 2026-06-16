@@ -20,7 +20,21 @@ class CommentService:
         self.posts = posts
 
     def create(self, post_id: int, payload: CommentCreate, author_id: int) -> Comment:
-        self._get_post_or_raise(post_id)
+        post = self._get_post_or_raise(post_id)
+        if post.comment_policy == "none":
+            raise AppError(
+                code="COMMENTS_DISABLED",
+                message="이 항목에는 상담 메모를 작성할 수 없습니다.",
+                status_code=status.HTTP_403_FORBIDDEN,
+                details={"post_id": post_id},
+            )
+        if post.comment_policy == "private" and post.author_id != author_id:
+            raise AppError(
+                code="COMMENTS_FORBIDDEN",
+                message="작성자만 이 상담 요청에 메모를 남길 수 있습니다.",
+                status_code=status.HTTP_403_FORBIDDEN,
+                details={"post_id": post_id},
+            )
         comment = Comment(
             post_id=post_id,
             author_id=author_id,
@@ -31,7 +45,9 @@ class CommentService:
         return saved_comment
 
     def list_by_post(self, post_id: int) -> list[Comment]:
-        self._get_post_or_raise(post_id)
+        post = self._get_post_or_raise(post_id)
+        if post.comment_policy != "public":
+            return []
         return self.comments.list_by_post(post_id)
 
     def delete(self, comment_id: int, author_id: int) -> None:
@@ -39,14 +55,14 @@ class CommentService:
         if comment is None:
             raise AppError(
                 code="COMMENT_NOT_FOUND",
-                message="댓글을 찾을 수 없습니다.",
+                message="상담 메모를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"comment_id": comment_id},
             )
         if comment.author_id != author_id:
             raise AppError(
                 code="COMMENT_FORBIDDEN",
-                message="댓글 작성자만 삭제할 수 있습니다.",
+                message="상담 메모 작성자만 삭제할 수 있습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"comment_id": comment_id},
             )
@@ -54,11 +70,13 @@ class CommentService:
         self.comments.delete(comment)
         self.db.commit()
 
-    def _get_post_or_raise(self, post_id: int) -> None:
-        if self.posts.get(post_id) is None:
+    def _get_post_or_raise(self, post_id: int):
+        post = self.posts.get(post_id)
+        if post is None:
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="게시글을 찾을 수 없습니다.",
+                message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )
+        return post

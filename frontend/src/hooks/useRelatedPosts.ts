@@ -58,7 +58,7 @@ export function useRelatedPosts({
 
   useEffect(() => {
     return scheduleRelatedPosts("compose", postForm, null, isComposeOpen && isAuthenticated);
-  }, [isAuthenticated, isComposeOpen, postForm.content, postForm.tags, postForm.title]);
+  }, [isAuthenticated, isComposeOpen, postForm.content, postForm.post_type, postForm.region, postForm.tags, postForm.title]);
 
   useEffect(() => {
     return scheduleRelatedPosts(
@@ -69,6 +69,8 @@ export function useRelatedPosts({
     );
   }, [
     editForm.content,
+    editForm.post_type,
+    editForm.region,
     editForm.tags,
     editForm.title,
     isAuthenticated,
@@ -181,7 +183,7 @@ export function useRelatedPosts({
       setRelatedPostsState(scope, {
         items: [],
         isLoading: false,
-        errorText: "유사 게시글을 불러오지 못했습니다.",
+        errorText: "관련 지원/시설을 불러오지 못했습니다.",
       });
     }
   }

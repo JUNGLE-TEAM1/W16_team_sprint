@@ -9,7 +9,7 @@ export type ApiRequest = <T>(
 
 export function useApiRequest() {
   const [status, setStatus] = useState<StatusState>({
-    text: "게시글을 불러오는 중",
+    text: "지원 정보를 탐색하거나 내 상황으로 지원을 찾아보세요.",
     isError: false,
   });
 

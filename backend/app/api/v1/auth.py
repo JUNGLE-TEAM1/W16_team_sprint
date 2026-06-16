@@ -2,6 +2,7 @@ from fastapi import APIRouter, Cookie, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
+from backend.app.core.errors import AppError
 from backend.app.db.session import get_db
 from backend.app.models.user import User
 from backend.app.repositories.auth_repository import AuthRepository
@@ -28,6 +29,18 @@ def get_session_user(
     service: AuthService = Depends(get_auth_service),
 ) -> User:
     return service.get_user_by_session_token(session_token)
+
+
+def get_optional_session_user(
+    session_token: str | None = Cookie(default=None, alias=settings.session_cookie_name),
+    service: AuthService = Depends(get_auth_service),
+) -> User | None:
+    if not session_token:
+        return None
+    try:
+        return service.get_user_by_session_token(session_token)
+    except AppError:
+        return None
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)

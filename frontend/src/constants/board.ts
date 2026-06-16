@@ -1,16 +1,19 @@
-import type { SearchType, SortType } from "../types";
+import type { PostType, SearchType, SortType } from "../types";
 
 export const CARD_THEMES = [
-  "theme-code",
-  "theme-data",
-  "theme-agent",
-  "theme-fastapi",
-  "theme-react",
-  "theme-db",
-  "theme-rag",
-  "theme-auth",
-  "theme-note",
+  "theme-policy",
+  "theme-facility",
+  "theme-case",
+  "theme-region",
+  "theme-source",
+  "theme-support",
 ];
+
+export const POST_TYPE_LABELS: Record<PostType, string> = {
+  policy: "지원 카드",
+  facility: "시설 카드",
+  case: "내 상담 요청",
+};
 
 export const SEARCH_TYPES: Array<{ value: SearchType; label: string }> = [
   { value: "title_content", label: "제목 + 내용" },
@@ -21,6 +24,6 @@ export const SEARCH_TYPES: Array<{ value: SearchType; label: string }> = [
 
 export const SORT_TYPES: Array<{ value: SortType; label: string }> = [
   { value: "latest", label: "최신순" },
-  { value: "comment_count", label: "댓글 많은 순" },
-  { value: "like_count", label: "좋아요 많은 순" },
+  { value: "comment_count", label: "메모 많은 순" },
+  { value: "like_count", label: "관심 많은 순" },
 ];

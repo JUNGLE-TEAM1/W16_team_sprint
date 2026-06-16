@@ -1,24 +1,67 @@
-# AI 지식 공유 게시판 Sprint Repo
+# AI 생활지원 매칭 보드
 
-AI 지식 공유 게시판 개인 과제를 위한 Sprint 레포입니다.
+공공데이터 기반으로 복지정책, 청년지원, 공공시설, 생활 인프라 정보를 보여주고, 사용자의 개인 상황에 맞는 지원 후보를 AI로 찾아주는 학습용 MVP 레포입니다.
 
-이 레포는 팀 프로젝트가 아니라 개인 구현 과제의 기준 레포입니다. 팀은 같은 MVP 시나리오와 같은 기술 스택을 기준으로 각자 구현하고, 싱크 시간에는 구현 방식, 설계 판단, 막힌 부분, 발표 가능한 설명을 비교합니다.
+이 프로젝트는 기존 `AI 지식 공유 게시판`에서 피봇되었습니다. 현재 기준은 **공개 지원 정보 보드 + 비공개 AI 지원 매칭**입니다.
 
 ## 서비스 컨셉
 
-AI 지식 공유 게시판은 개발자와 학습자가 질문, 트러블슈팅, 학습 노트, 참고 자료를 게시글로 공유하고, 이후 AI가 유사 글 탐색, 외부 자료 수집, 글쓰기 보조를 돕는 게시판 서비스입니다.
-
-기본 사용자 흐름은 다음을 기준으로 합니다.
+사용자는 로그인하지 않아도 공개 지원 정보를 볼 수 있습니다. 다만 개인 상황을 입력해서 AI 매칭을 받거나, 매칭 요청 기록을 저장하려면 로그인이 필요합니다.
 
 ```text
-회원가입
+지원 정보 탐색
 -> 로그인
--> 게시글 작성
--> 댓글/태그/검색/페이징
--> RAG 기반 유사 글 추천
--> MCP 기반 외부 자료 조회
--> Agent 기반 글쓰기 보조
+-> AI 지원 찾기
+-> 내 상황 입력
+-> RAG로 공개 지원/시설 카드 검색
+-> AI가 관련 지원, 부족 조건, 체크리스트 요약
+-> 내 상담 기록에 비공개 저장
 ```
+
+## 핵심 도메인
+
+| 항목 | 의미 |
+| --- | --- |
+| 지원 카드 | 복지정책, 청년지원, 주거지원, 취업지원 같은 공개 정책 정보 |
+| 시설 카드 | 복지관, 청년센터, 상담센터, 생활 인프라 같은 공개 시설 정보 |
+| 내 상담 요청 | 사용자가 자기 상황을 입력한 비공개 AI 매칭 요청 |
+| 태그 | `청년`, `주거`, `취업`, `서울`, `마포구`, `저소득` 같은 매칭 기준 |
+| RAG | 개인 상담 요청을 query로 사용해 공개 지원/시설 카드만 검색 |
+| MCP | 공공데이터나 정책 출처를 JSON-RPC tool 형태로 조회하는 연결 지점 |
+| Agent | RAG/MCP 결과를 조합해 신청 가능성, 부족 조건, 체크리스트를 생성할 후속 기능 |
+
+## 공개/비공개 기준
+
+| 데이터 | 공개 목록 | RAG index | 댓글 | 비고 |
+| --- | --- | --- | --- | --- |
+| `policy` | 노출 | 포함 | 없음 | 지원 카드 |
+| `facility` | 노출 | 포함 | 없음 | 시설 카드 |
+| `case` | 미노출 | 제외 | 없음 | 작성자 본인만 보는 내 상담 요청 |
+
+개인 상담 요청에는 민감한 정보가 들어갈 수 있으므로 공개 게시판에 섞지 않고, 공용 vector index에도 저장하지 않습니다. 현재 입력값은 RAG 검색 query로만 사용합니다.
+
+## 현재 구현 상태
+
+완료된 기반:
+
+- Session 기반 회원가입/로그인/로그아웃
+- 게시글 CRUD 기반을 재사용한 지원 카드/시설 카드/상담 요청 모델
+- PostgreSQL + pgvector 기반 RAG 저장 구조
+- LangChain 기반 RAG index 연동
+- OpenAI embedding 및 관련 지원 카드 요약
+- 검색/태그/정렬/페이징
+- 좋아요를 `관심 등록` 의미로 사용
+- JSON-RPC MCP endpoint 기반 외부 참고자료 조회 틀
+- private case 보호 정책
+
+아직 필요한 MVP 작업:
+
+- `내 상담 기록` 프론트 화면
+- 공공데이터 import script
+- `data-bot` 작성자 기반 지원/시설 카드 seed
+- Stack Overflow MCP provider를 공공데이터/정책 출처 provider로 교체
+- AI 지원 찾기 결과 화면 정리
+- 정부/공공기관 톤 UI polishing
 
 ## 기술 스택
 
@@ -29,68 +72,9 @@ AI 지식 공유 게시판은 개발자와 학습자가 질문, 트러블슈팅,
 | Database | PostgreSQL |
 | ORM | SQLAlchemy |
 | AI/RAG | LangChain + OpenAI Embeddings |
-| AI/RAG DB | PostgreSQL + pgvector |
-| Auth | Session 인증을 main auth로 선택 |
-
-OAuth/OIDC는 현재 필수 구현 범위가 아니며, 필요 시 추후 확장 학습 주제로 다룹니다.
-
-## 현재 Sprint 목표
-
-오늘 목표는 Sprint 1과 Sprint 2를 구현 가능한 기준으로 정리하고 완료하는 것입니다.
-
-### Sprint 1. Foundation
-
-목표는 이후 게시판 기능과 Session 인증을 붙일 수 있는 기반을 만드는 것입니다.
-
-현재 확정된 방향:
-
-- FastAPI 앱 구조는 `router / schema / service / repository / model` 계층을 사용합니다.
-- PostgreSQL을 기본 DB로 사용합니다.
-- `Post`는 문자열 작성자(`author_name`)가 아니라 `User` FK 기반으로 변경합니다.
-- `Post`에는 `updated_at`을 포함합니다.
-- 게시글 응답에는 작성자 표시명(`author_display_name`)을 포함합니다.
-- `Comment`, `Tag`는 다음 Sprint에서 구현합니다.
-- Alembic 도입은 보류하고, 오늘은 로컬 DB reset 방식으로 진행합니다.
-
-Sprint 1 완료 기준:
-
-```text
-1. FastAPI 서버가 실행된다.
-2. React + Vite 앱이 실행된다.
-3. PostgreSQL 연결이 된다.
-4. User 모델이 있다.
-5. Post 모델이 User와 FK로 연결된다.
-6. Post 생성 또는 조회 API가 동작한다.
-7. 요청 흐름을 router -> schema -> service -> repository -> DB -> response로 설명할 수 있다.
-8. Sprint note에 구조 선택 이유를 남긴다.
-```
-
-### Sprint 2. Session Auth
-
-목표는 Session 기반 회원가입, 로그인, 현재 사용자 확인, 보호 API 연결을 구현하는 것입니다.
-
-현재 확정된 방향:
-
-- Session 인증을 main auth 방식으로 사용합니다.
-- 세션은 서버 DB에 저장하고, 클라이언트에는 `HttpOnly` cookie를 내려주는 구조를 기준으로 합니다.
-- CSRF 대응은 `SameSite=Lax`, 명시적 CORS origin 제한을 최소 안전장치로 두고, CSRF token은 후속 검토합니다.
-- Session 만료 시간은 4시간입니다.
-- JWT/token pair 코드는 구현 범위에서 제거합니다.
-- 게시글 작성은 로그인 사용자와 연결합니다.
-- 게시글 수정/삭제 권한은 내일 CRUD Sprint에서 본격 처리합니다.
-
-Sprint 2 완료 기준:
-
-```text
-1. 회원가입이 된다.
-2. Session 로그인이 된다.
-3. 현재 로그인 사용자를 확인할 수 있다.
-4. 로그아웃이 된다.
-5. 인증 없이 보호 API를 호출하면 401이 발생한다.
-6. 로그인 사용자가 게시글 작성 시 author_id와 연결된다.
-7. Session 인증 방식의 장점과 한계를 설명할 수 있다.
-8. Sprint note에 인증 흐름과 선택 이유를 남긴다.
-```
+| Vector DB | PostgreSQL + pgvector |
+| Auth | Session 인증 |
+| MCP | FastAPI 내부 JSON-RPC endpoint |
 
 ## 실행 방법
 
@@ -129,6 +113,8 @@ http://127.0.0.1:5173
 ```bash
 docker compose up -d db
 .venv/bin/python -m pytest backend/tests
+cd frontend
+npm run build
 ```
 
 테스트도 PostgreSQL을 사용합니다. 로컬 DB schema를 크게 바꾼 뒤 테스트가 꼬이면 학습용 데이터 reset이 필요할 수 있습니다.
@@ -139,34 +125,35 @@ docker compose up -d db
 | --- | --- |
 | FastAPI app | `backend/app/main.py` |
 | DB 설정 | `backend/app/db/session.py` |
+| dev schema sync | `backend/app/db/schema.py` |
 | 공통 설정 | `backend/app/core/config.py` |
-| 공통 에러 | `backend/app/core/errors.py` |
-| 보안 유틸 | `backend/app/core/security.py` |
 | 인증 API | `backend/app/api/v1/auth.py` |
-| 게시글 API | `backend/app/api/v1/posts.py` |
-| 인증 서비스 | `backend/app/services/auth_service.py` |
-| 게시글 서비스 | `backend/app/services/post_service.py` |
-| DB 모델 | `backend/app/models/` |
-| React UI | `frontend/src/App.jsx` |
+| 지원 정보 API | `backend/app/api/v1/posts.py` |
+| RAG API | `backend/app/api/v1/ai.py` |
+| MCP API | `backend/app/api/v1/mcp.py` |
+| 게시판/상담 정책 | `backend/app/services/post_service.py` |
+| LangChain RAG index | `backend/app/services/langchain_rag_index.py` |
+| RAG 요약 | `backend/app/services/rag_summary_service.py` |
+| MCP service | `backend/app/services/mcp_service.py` |
+| 외부 참고자료 provider | `backend/app/services/external_reference_service.py` |
+| React entry | `frontend/src/App.tsx` |
+| 공개 지원 목록 | `frontend/src/components/PostList.tsx` |
+| 지원/상담 상세 | `frontend/src/components/PostDetail.tsx` |
+| AI 지원 찾기 modal | `frontend/src/components/ComposeModal.tsx` |
+| 화면 controller | `frontend/src/hooks/useBoardController.ts` |
 
 ## 문서
 
-- [스프린트 운영 문서](docs/ai_knowledge_board_sprint_plan.md)
-- [레포지토리 전체 흐름](docs/repository-overall-flow.md)
-- [Sprint 1 Foundation 설계 의사결정 가이드](docs/sprint-notes/sprint-01-foundation-decisions.md)
-- [Sprint 1 구현 기록](docs2/sprint-1/implementation-record.md)
-- [Sprint 2 Session 인증 의사결정과 전체 흐름](docs2/sprint-2/session-auth-decision-and-flow.md)
-- [Sprint 2 구현 기록](docs2/sprint-2/implementation-record.md)
+- [피봇 1차 구현 기록](docs3/pivot-1/implementation-record.md)
+- [피봇 2차 구현 기록](docs3/pivot-2/implementation-record.md)
+- [피봇 3차 MVP 방향 및 데이터 계획](docs3/pivot-3/mvp-direction-and-data-plan.md)
 - [Sprint 6 LangChain RAG 리팩토링 구현 기록](docs2/sprint-6/langchain-rag-refactor-record.md)
 - [Sprint 7 MCP 개념 및 의사결정 가이드](docs2/sprint-7/mcp-concept-and-decision-guide.md)
-- [스프린트 1 파일 구조](docs/sprint-1-file-structure.md)
-- [스프린트 1 API 데이터 흐름](docs/sprint-1-api-data-flow.md)
-- [스프린트 2 인증/인가 흐름](docs/sprint-2-auth-flow.md)
-- [스프린트 2 실행 흐름 가이드](docs/sprint-2-execution-flow-guide.md)
-- [Sprint 2 인증/인가 개념 가이드](docs/sprint-2/auth-security-concepts.md)
 
-## 다음 Sprint로 넘긴 결정
+## 다음 구현 순서
 
-- 게시글 수정/삭제 권한을 `403 Forbidden`으로 처리합니다.
-- CSRF token 또는 Origin 검증 추가 여부를 상태 변경 API가 늘어나는 시점에 다시 결정합니다.
-- 만료된 session cleanup 전략을 추후 결정합니다.
+1. `내 상담 기록` 화면을 추가합니다.
+2. 공공데이터 import script와 `data-bot` seed를 만듭니다.
+3. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
+4. AI 지원 찾기 결과 화면을 카드형으로 정리합니다.
+5. UI를 밝은 공공서비스 톤으로 polishing합니다.

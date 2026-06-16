@@ -115,7 +115,11 @@ export function useBoardController() {
       relatedPosts.resetComposeRelatedPosts();
       relatedPosts.resetEditRelatedPosts();
       externalReferences.resetComposeExternalReferences();
-      await comments.loadComments(selectedPost.id, { quiet: true });
+      if (selectedPost.comment_policy !== "none") {
+        await comments.loadComments(selectedPost.id, { quiet: true });
+      } else {
+        comments.resetComments();
+      }
     }
   }
 
@@ -126,7 +130,9 @@ export function useBoardController() {
       externalReferences.resetComposeExternalReferences();
       await postSearch.loadTags({ quiet: true });
       await postSearch.loadPosts({ quiet: true, filters: { page: 1 } });
-      await comments.loadComments(createdPost.id, { quiet: true });
+      if (createdPost.comment_policy !== "none") {
+        await comments.loadComments(createdPost.id, { quiet: true });
+      }
     }
   }
 
