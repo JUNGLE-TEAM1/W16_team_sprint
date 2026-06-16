@@ -49,6 +49,9 @@ def test_rag_assist_finds_suwon_policy_cards() -> None:
     assert body["llm_used"] is False
     assert "청년월세지원사업" in body["matches"][0]["title"]
     assert body["matches"][0]["score"] >= 0.55
+    assert body["mvp_highlight"]["post_id"] == body["matches"][0]["post_id"]
+    assert "청년월세지원사업" in body["mvp_highlight"]["title"]
+    assert "월세/주거비 부담" in body["mvp_highlight"]["why_it_fits"]
     assert body["recommendation"]
 
 
@@ -94,6 +97,8 @@ def test_rag_assist_scores_financial_need_above_generic_cards() -> None:
     body = response.json()
     assert "청년월세지원사업" in body["matches"][0]["title"]
     assert body["matches"][0]["score"] >= 0.55
+    assert body["mvp_highlight"]["post_id"] == body["matches"][0]["post_id"]
+    assert "매칭률" in body["mvp_highlight"]["why_highlight"]
     assert all("창업" not in match["title"] for match in body["matches"][:1])
 
 

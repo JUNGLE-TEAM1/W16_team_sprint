@@ -17,7 +17,7 @@ from backend.app.core.embedding import (
 from backend.app.core.errors import AppError
 from backend.app.models.post import Post
 from backend.app.models.post_embedding import PostEmbedding
-from backend.app.schemas.rag import RagAssistRequest, RagAssistResponse, RagMatch, RagReference
+from backend.app.schemas.rag import RagAssistRequest, RagAssistResponse, RagMatch, RagMvpHighlight, RagReference
 from backend.app.services.reference_service import fetch_reference_materials
 
 
@@ -177,6 +177,7 @@ class RagService:
             llm_used=llm_used,
             stored_vectors=len(scored_matches),
             duplicate_warning=duplicate_warning,
+            mvp_highlight=self._mvp_highlight(query_text=query_text, matches=enriched_matches),
             recommendation=recommendation,
             matches=enriched_matches,
             references=references,
@@ -510,6 +511,46 @@ class RagService:
 
     def _match_normalize(self, value: str) -> str:
         return re.sub(r"\s+", " ", value.lower()).strip()
+
+    def _mvp_highlight(self, *, query_text: str, matches: list[RagMatch]) -> RagMvpHighlight | None:
+        if not matches:
+            return None
+
+        top_match = matches[0]
+        query_norm = self._match_normalize(query_text)
+        title = self._clean_policy_title(top_match.title)
+        tag_text = " ".join(tag.name for tag in top_match.tags)
+        matched_signal = self._highlight_signal(query_norm=query_norm, title=title, tag_text=tag_text)
+        score_percent = round(top_match.score * 100)
+
+        return RagMvpHighlight(
+            post_id=top_match.post_id,
+            title=f"{title} 먼저 확인",
+            why_it_fits=(
+                f"입력한 상황에서 {matched_signal} 신호가 잡혔고, "
+                f"이 카드가 그 조건과 가장 가까운 수원시 청년정책 후보입니다."
+            ),
+            why_highlight=(
+                f"현재 RAG 상위 매칭률이 {score_percent}%라 먼저 눌러서 대상 조건, 사업기간, 문의처를 확인할 가치가 큽니다."
+            ),
+        )
+
+    def _highlight_signal(self, *, query_norm: str, title: str, tag_text: str) -> str:
+        combined = self._match_normalize(f"{title} {tag_text}")
+        if any(keyword in query_norm or keyword in combined for keyword in ("월세", "주거", "임차", "전세", "보증금")):
+            return "월세/주거비 부담"
+        if any(keyword in query_norm or keyword in combined for keyword in ("경제", "어려움", "소득", "생활비", "기본소득", "금융")):
+            return "경제적 부담"
+        if any(keyword in query_norm or keyword in combined for keyword in ("취업", "구직", "면접", "일자리", "직장", "교통비")):
+            return "취업 준비 비용"
+        if any(keyword in query_norm or keyword in combined for keyword in ("창업", "사업", "스타트업", "컨설팅")):
+            return "창업/사업화"
+        if any(keyword in query_norm or keyword in combined for keyword in ("교육", "강의", "강좌", "학습", "훈련")):
+            return "교육/역량 강화"
+        return "수원시 청년 조건"
+
+    def _clean_policy_title(self, value: str) -> str:
+        return re.sub(r"^\[[^\]]+\]\s*", "", value).strip() or value
 
     def _excerpt(self, value: str) -> str:
         normalized = value.strip().replace("\n", " ")

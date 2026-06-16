@@ -121,21 +121,6 @@ export function WriteColumn({
             </div>
             <span className="softPill">{Math.round(agentResult.confidence * 100)}%</span>
           </div>
-          <div className="mvpHighlight">
-            <div className="mvpHighlightHeader">
-              <BadgeCheck size={15} />
-              <span>MVP 하이라이트</span>
-            </div>
-            <strong>{agentResult.mvp_highlight.title}</strong>
-            <p>
-              <b>왜 맞나</b>
-              {agentResult.mvp_highlight.why_it_fits}
-            </p>
-            <p>
-              <b>왜 하이라이트</b>
-              {agentResult.mvp_highlight.why_highlight}
-            </p>
-          </div>
           <strong className="agentTitle">{agentResult.suggested_title}</strong>
           <p>{agentResult.suggested_content}</p>
           <div className="agentTags">
@@ -172,6 +157,32 @@ export function WriteColumn({
             </div>
           </div>
           <p>{ragResult.recommendation}</p>
+          {ragResult.mvp_highlight && (
+            <button
+              className="mvpHighlight ragHighlight"
+              type="button"
+              onClick={() => onOpenMatchedPost(ragResult.mvp_highlight!.post_id)}
+              aria-label={`${ragResult.mvp_highlight.title} 상세 보기`}
+            >
+              <span className="mvpHighlightHeader">
+                <BadgeCheck size={15} />
+                <span>MVP 하이라이트</span>
+              </span>
+              <strong>{ragResult.mvp_highlight.title}</strong>
+              <span className="mvpHighlightText">
+                <b>왜 맞나</b>
+                {ragResult.mvp_highlight.why_it_fits}
+              </span>
+              <span className="mvpHighlightText">
+                <b>왜 하이라이트</b>
+                {ragResult.mvp_highlight.why_highlight}
+              </span>
+              <span className="ragMatchAction">
+                상세 보기
+                <ArrowRight size={13} />
+              </span>
+            </button>
+          )}
           <div className="ragMatches">
             {ragResult.matches.map((match) => (
               <button

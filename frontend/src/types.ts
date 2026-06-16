@@ -71,6 +71,12 @@ export type RagAssistResponse = {
   llm_used: boolean;
   stored_vectors: number;
   duplicate_warning: boolean;
+  mvp_highlight: {
+    post_id: number;
+    title: string;
+    why_it_fits: string;
+    why_highlight: string;
+  } | null;
   recommendation: string;
   matches: RagMatch[];
   references: RagReference[];
@@ -79,11 +85,6 @@ export type RagAssistResponse = {
 export type AgentWritingAssistResponse = {
   provider: string;
   model: string;
-  mvp_highlight: {
-    title: string;
-    why_it_fits: string;
-    why_highlight: string;
-  };
   suggested_title: string;
   suggested_content: string;
   suggested_tag_names: string[];

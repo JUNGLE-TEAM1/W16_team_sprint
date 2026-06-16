@@ -28,6 +28,13 @@ class RagReference(BaseModel):
     excerpt: str
 
 
+class RagMvpHighlight(BaseModel):
+    post_id: int
+    title: str
+    why_it_fits: str
+    why_highlight: str
+
+
 class RagAssistResponse(BaseModel):
     embedding_dimensions: int
     embedding_provider: str
@@ -37,6 +44,7 @@ class RagAssistResponse(BaseModel):
     llm_used: bool
     stored_vectors: int
     duplicate_warning: bool
+    mvp_highlight: RagMvpHighlight | None
     recommendation: str
     matches: list[RagMatch]
     references: list[RagReference]

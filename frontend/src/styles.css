@@ -653,11 +653,14 @@ textarea:focus {
 .mvpHighlight {
   display: grid;
   gap: 7px;
+  width: 100%;
+  border: 0;
   border-left: 3px solid var(--accent);
   border-radius: 6px;
   padding: 10px 11px;
   background: rgba(0, 195, 165, 0.08);
   color: #404040;
+  text-align: left;
 }
 
 .mvpHighlightHeader {
@@ -677,7 +680,7 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
-.mvpHighlight p {
+.mvpHighlightText {
   display: grid;
   gap: 3px;
   margin: 0;
@@ -690,6 +693,20 @@ textarea:focus {
 .mvpHighlight b {
   color: var(--accent-dark);
   font-size: 0.72rem;
+}
+
+.ragHighlight {
+  margin: 0 0 12px;
+}
+
+.ragHighlight:hover > strong,
+.ragHighlight:focus-visible > strong {
+  color: var(--accent-dark);
+}
+
+.ragHighlight:focus-visible {
+  outline: 2px solid rgba(0, 143, 123, 0.35);
+  outline-offset: 3px;
 }
 
 .agentPanel > p {

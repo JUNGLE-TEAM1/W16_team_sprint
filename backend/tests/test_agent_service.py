@@ -18,9 +18,6 @@ def test_writing_agent_suggests_suwon_youth_draft_and_tags() -> None:
 
     assert result.provider == "none"
     assert result.model == "rule-suwon-youth-agent"
-    assert result.mvp_highlight.title == "월세 부담 완화가 1순위"
-    assert "주거 지원" in result.mvp_highlight.why_it_fits
-    assert "MVP" in result.mvp_highlight.why_highlight
     assert result.suggested_title == "수원시 청년 월세 상담"
     assert "상담 정리" in result.suggested_content
     assert "청년" in result.suggested_tag_names
@@ -44,8 +41,6 @@ def test_writing_agent_endpoint_returns_suwon_suggestion() -> None:
     body = response.json()
     assert body["provider"] == "none"
     assert body["model"] == "rule-suwon-youth-agent"
-    assert body["mvp_highlight"]["title"] == "창업/교육 지원 매칭이 우선"
-    assert "왜" not in body["mvp_highlight"]["title"]
     assert body["suggested_title"] == "수원 청년 창업 상담"
     assert "수원시" in body["suggested_tag_names"]
     assert "창업" in body["suggested_tag_names"]
