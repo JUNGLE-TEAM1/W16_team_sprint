@@ -134,6 +134,7 @@ def test_related_posts_returns_top_matches_and_supports_exclude_post_id() -> Non
             "title": "FastAPI 인증 문제",
             "content": "Session 인증과 JWT 인증 차이를 정리합니다.",
             "tags": ["auth", "fastapi"],
+            "post_type": "policy",
         },
     )
 
@@ -151,6 +152,7 @@ def test_related_posts_returns_top_matches_and_supports_exclude_post_id() -> Non
             "title": "FastAPI 인증 문제",
             "content": "Session 인증과 JWT 인증 차이를 정리합니다.",
             "tags": ["auth", "fastapi"],
+            "post_type": "policy",
             "exclude_post_id": first_id,
         },
     )
@@ -219,6 +221,7 @@ def test_related_posts_returns_llm_summaries_when_summary_provider_succeeds() ->
             "title": "FastAPI 세션 인증 흐름",
             "content": "Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
             "tags": ["fastapi", "auth"],
+            "post_type": "policy",
         },
     )
 
@@ -246,6 +249,7 @@ def test_related_posts_keeps_items_when_summary_provider_fails() -> None:
             "title": "FastAPI 세션 인증 흐름",
             "content": "Session cookie를 통해 로그인 사용자를 확인하고 CSRF 위험을 줄이는 방법을 정리합니다.",
             "tags": ["fastapi", "auth"],
+            "post_type": "policy",
         },
     )
 
