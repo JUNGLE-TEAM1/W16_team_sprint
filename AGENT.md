@@ -56,10 +56,11 @@ The UI should feel like a practical public-service portal rather than a dark
 blog-style developer board:
 
 1. Prefer a bright government/public-institution tone with white or light-gray surfaces and restrained blue/teal accents.
-2. Prefer terms like `지원 정보`, `지원 카드`, `시설 카드`, `AI 지원 찾기`, `내 상담 기록`, `공공데이터 참고자료`, and `관련 지원/시설` over generic `게시글` wording.
+2. Prefer terms like `지원 정보`, `지원 카드`, `시설 카드`, `상담 등록`, `내 상담 기록`, `AI 답변`, `공공데이터 참고자료`, and `관련 지원/시설` over generic `게시글` wording.
 3. Users may browse support/facility cards without logging in.
 4. Login is still required for saving private matching requests, viewing `내 상담 기록`, likes, and AI assistance flows that call protected APIs.
-5. The primary MVP navigation should distinguish `지원 정보`, `AI 지원 찾기`, and `내 상담 기록` so users do not confuse public cards with private requests.
+5. The primary MVP navigation should distinguish `지원 정보` and `내 상담 기록`; 상담 creation should use a `상담 등록` action rather than a separate duplicate top-level `AI 지원 찾기` menu.
+6. Consultation detail pages should reserve a visible `AI 답변` section. Until Agent persistence exists, show an explicit pending/placeholder state.
 
 ## Learning Record Rule
 

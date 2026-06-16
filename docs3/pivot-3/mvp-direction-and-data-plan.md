@@ -1,5 +1,7 @@
 # Pivot 3차 MVP 방향 및 데이터 계획
 
+> 후속 구현: Pivot 4차에서 `내 상담 기록` 프론트 화면을 추가했습니다. 현재 다음 구현 우선순위는 공공데이터 import script와 `data-bot` seed입니다.
+
 ## 1. 이번 결정의 핵심
 
 이번 결정은 피봇 후 애매해진 역할을 다시 나누는 것입니다.
@@ -35,7 +37,7 @@ MVP 메뉴는 세 개로 나눕니다.
 flowchart LR
     User["사용자"]
     PublicBoard["지원 정보<br/>공개 카드 목록"]
-    AiMatch["AI 지원 찾기<br/>비공개 상황 입력"]
+    AiMatch["상담 등록<br/>비공개 상담 입력"]
     MyRecords["내 상담 기록<br/>본인만 조회"]
 
     User --> PublicBoard
@@ -46,7 +48,7 @@ flowchart LR
 | 메뉴 | 공개 여부 | 로그인 필요 | 내용 |
 | --- | --- | --- | --- |
 | 지원 정보 | 공개 | 아니오 | 지원 카드, 시설 카드 목록과 상세 |
-| AI 지원 찾기 | 비공개 입력 | 예 | 내 상황 입력, 관련 지원 추천, 체크리스트 생성 |
+| 상담 등록 | 비공개 입력 | 예 | 상담 내용 입력, 관련 지원 추천, 체크리스트 생성 |
 | 내 상담 기록 | 비공개 | 예 | 내가 저장한 상담 요청과 AI 매칭 결과 |
 
 ## 4. 데이터 공개 정책
@@ -88,7 +90,7 @@ flowchart TD
 | --- | --- |
 | 공개 지원 정보 목록/상세 | 게시판이 존재해야 하는 이유를 만든다. |
 | 지원/시설 카드 seed | RAG와 화면이 빈 상태가 되지 않게 한다. |
-| AI 지원 찾기 입력 | 사용자의 실제 문제 진입점이다. |
+| 상담 등록 | 사용자의 실제 문제 진입점이다. |
 | RAG 추천 top-3 | 현재 구현된 LangChain/pgvector 흐름을 피봇 도메인에 맞게 사용한다. |
 | 추천 카드 요약 | 사용자가 왜 이 카드가 추천됐는지 이해할 수 있게 한다. |
 | 내 상담 기록 | 비공개 요청을 저장한 뒤 다시 볼 수 있게 한다. |
@@ -118,7 +120,7 @@ sequenceDiagram
     UI->>API: 2. GET /api/v1/posts
     API->>DB: 3. public policy/facility 조회
     DB-->>UI: 4. 공개 지원 카드 반환
-    User->>UI: 5. AI 지원 찾기에 내 상황 입력
+    User->>UI: 5. 상담 등록에 상담 내용 입력
     UI->>API: 6. RAG 추천 요청
     API->>RAG: 7. 개인 입력을 query로만 사용
     RAG->>DB: 8. public RAG index에서 관련 카드 검색
@@ -149,7 +151,7 @@ sequenceDiagram
    - 코드: backend/app/services/post_service.py
    - 확인: private case가 목록에 섞이지 않는다.
 
-5. AI 지원 찾기에 내 상황 입력
+5. 상담 등록에 상담 내용 입력
    - 코드: frontend/src/components/ComposeModal.tsx
    - 확인: 사용자는 개인 상황을 공개 글이 아니라 private matching request로 입력한다.
 
@@ -249,21 +251,19 @@ source_external_id = 원본 row id
 
 ## 8. 바로 다음 구현
 
-1. `내 상담 기록` 프론트 화면
-   - 이미 백엔드에는 `GET /api/v1/posts/my-consultations`가 있다.
-   - 프론트에 메뉴와 목록/상세 전환이 필요하다.
-
-2. 공공데이터 seed/import script
+1. 공공데이터 seed/import script
    - `data-bot` 사용자를 만들거나 찾는다.
    - 공공데이터 row를 `policy`/`facility` Post로 변환한다.
    - bulk 적재 시 embedding 생성 전략을 정한다.
 
-3. MCP provider 교체
+2. MCP provider 교체
    - 현재 Stack Overflow provider는 피봇 전 흔적이다.
    - 공공데이터/정책 출처 조회 provider로 바꾼다.
 
-4. AI 지원 찾기 결과 화면
-   - 관련 지원 카드만 보여주는 수준에서 끝내지 않고, 신청 가능성/부족 조건/체크리스트를 읽기 좋게 나눈다.
+3. 상담 상세의 Agent 답변 생성/저장 흐름
+   - 관련 지원 카드만 보여주는 수준에서 끝내지 않고, 신청 가능성/부족 조건/체크리스트를 `AI 답변` 섹션에 저장한다.
+   - 상담이 수정되면 기존 AI 답변은 직접 수정하지 않고 재생성 필요 상태로 다룬다.
+   - 상담이 삭제되면 연결된 AI 답변도 함께 삭제한다.
 
-5. UI polishing
+4. UI polishing
    - 어두운 블로그 UI가 아니라 밝은 정부/공공기관 서비스 톤으로 정리한다.

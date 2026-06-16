@@ -11,8 +11,8 @@
 ```text
 지원 정보 탐색
 -> 로그인
--> AI 지원 찾기
--> 내 상황 입력
+-> 상담 등록
+-> 상담 내용 입력
 -> RAG로 공개 지원/시설 카드 검색
 -> AI가 관련 지원, 부족 조건, 체크리스트 요약
 -> 내 상담 기록에 비공개 저장
@@ -25,6 +25,7 @@
 | 지원 카드 | 복지정책, 청년지원, 주거지원, 취업지원 같은 공개 정책 정보 |
 | 시설 카드 | 복지관, 청년센터, 상담센터, 생활 인프라 같은 공개 시설 정보 |
 | 내 상담 요청 | 사용자가 자기 상황을 입력한 비공개 AI 매칭 요청 |
+| AI 답변 | 상담 요청과 공공데이터를 바탕으로 Agent가 생성할 답변 영역 |
 | 태그 | `청년`, `주거`, `취업`, `서울`, `마포구`, `저소득` 같은 매칭 기준 |
 | RAG | 개인 상담 요청을 query로 사용해 공개 지원/시설 카드만 검색 |
 | MCP | 공공데이터나 정책 출처를 JSON-RPC tool 형태로 조회하는 연결 지점 |
@@ -53,14 +54,15 @@
 - 좋아요를 `관심 등록` 의미로 사용
 - JSON-RPC MCP endpoint 기반 외부 참고자료 조회 틀
 - private case 보호 정책
+- `내 상담 기록` 프론트 화면
+- 상담 상세의 `AI 답변` placeholder 섹션
 
 아직 필요한 MVP 작업:
 
-- `내 상담 기록` 프론트 화면
 - 공공데이터 import script
 - `data-bot` 작성자 기반 지원/시설 카드 seed
 - Stack Overflow MCP provider를 공공데이터/정책 출처 provider로 교체
-- AI 지원 찾기 결과 화면 정리
+- 상담 상세의 Agent 답변 생성/저장 연결
 - 정부/공공기관 톤 UI polishing
 
 ## 기술 스택
@@ -139,7 +141,7 @@ npm run build
 | React entry | `frontend/src/App.tsx` |
 | 공개 지원 목록 | `frontend/src/components/PostList.tsx` |
 | 지원/상담 상세 | `frontend/src/components/PostDetail.tsx` |
-| AI 지원 찾기 modal | `frontend/src/components/ComposeModal.tsx` |
+| 상담 등록 modal | `frontend/src/components/ComposeModal.tsx` |
 | 화면 controller | `frontend/src/hooks/useBoardController.ts` |
 
 ## 문서
@@ -147,13 +149,13 @@ npm run build
 - [피봇 1차 구현 기록](docs3/pivot-1/implementation-record.md)
 - [피봇 2차 구현 기록](docs3/pivot-2/implementation-record.md)
 - [피봇 3차 MVP 방향 및 데이터 계획](docs3/pivot-3/mvp-direction-and-data-plan.md)
+- [피봇 4차 내 상담 기록 UI 구현 기록](docs3/pivot-4/implementation-record.md)
 - [Sprint 6 LangChain RAG 리팩토링 구현 기록](docs2/sprint-6/langchain-rag-refactor-record.md)
 - [Sprint 7 MCP 개념 및 의사결정 가이드](docs2/sprint-7/mcp-concept-and-decision-guide.md)
 
 ## 다음 구현 순서
 
-1. `내 상담 기록` 화면을 추가합니다.
-2. 공공데이터 import script와 `data-bot` seed를 만듭니다.
-3. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
-4. AI 지원 찾기 결과 화면을 카드형으로 정리합니다.
-5. UI를 밝은 공공서비스 톤으로 polishing합니다.
+1. 공공데이터 import script와 `data-bot` seed를 만듭니다.
+2. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
+3. 상담 상세의 Agent 답변 생성/저장 흐름을 연결합니다.
+4. UI를 밝은 공공서비스 톤으로 polishing합니다.
