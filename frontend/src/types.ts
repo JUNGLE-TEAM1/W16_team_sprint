@@ -103,6 +103,40 @@ export interface RelatedPostsState {
   errorText: string;
 }
 
+export interface ExternalReference {
+  title: string;
+  url: string;
+  source: string;
+  summary: string;
+  tags: string[];
+  score: number | null;
+  answer_count: number | null;
+  is_answered: boolean | null;
+}
+
+export interface ExternalReferencesState {
+  items: ExternalReference[];
+  isLoading: boolean;
+  errorText: string;
+}
+
+export interface ExternalReferencesJsonRpcResponse {
+  jsonrpc: "2.0";
+  id: string;
+  result?: {
+    tool: string;
+    content: Array<{ type: string; text: string }>;
+    structuredContent?: {
+      items: ExternalReference[];
+    };
+  };
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
+}
+
 export interface LoginResponse {
   user: User;
 }

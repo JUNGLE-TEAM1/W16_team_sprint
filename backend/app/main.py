@@ -11,6 +11,7 @@ from backend.app import models  # noqa: F401
 from backend.app.api.v1.ai import router as ai_router
 from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.comments import router as comments_router
+from backend.app.api.v1.mcp import router as mcp_router
 from backend.app.api.v1.posts import router as posts_router
 from backend.app.api.v1.tags import router as tags_router
 from backend.app.core.config import settings
@@ -43,6 +44,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(posts_router, prefix="/api/v1")
 app.include_router(comments_router, prefix="/api/v1")
 app.include_router(tags_router, prefix="/api/v1")
+app.include_router(mcp_router, prefix="/api/v1")
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
 

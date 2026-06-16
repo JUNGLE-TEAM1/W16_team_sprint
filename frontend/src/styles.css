@@ -791,12 +791,31 @@ h3 {
   align-items: start;
 }
 
+.compose-ai-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.compose-side-panels {
+  display: grid;
+  gap: 14px;
+}
+
 .related-panel {
   display: grid;
   gap: 14px;
   border: 1px solid rgba(64, 120, 255, 0.24);
   border-radius: 8px;
   background: rgba(64, 120, 255, 0.08);
+  padding: 16px;
+}
+
+.reference-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(224, 183, 90, 0.28);
+  border-radius: 8px;
+  background: rgba(224, 183, 90, 0.08);
   padding: 16px;
 }
 
@@ -839,6 +858,16 @@ h3 {
     transform 160ms ease,
     border-color 160ms ease,
     background 160ms ease;
+}
+
+.reference-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  padding: 14px;
 }
 
 .related-card:hover {
@@ -884,6 +913,50 @@ h3 {
   font-size: 14px;
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+
+.reference-card p,
+.reference-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.reference-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reference-meta span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(224, 183, 90, 0.34);
+  border-radius: 999px;
+  background: rgba(224, 183, 90, 0.11);
+  color: #f2d89b;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.reference-link {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .related-card .related-summary {

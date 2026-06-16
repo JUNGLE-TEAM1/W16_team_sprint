@@ -5,6 +5,7 @@ import type { Post } from "../types";
 import { useApiRequest } from "./useApiRequest";
 import { useAuth } from "./useAuth";
 import { useComments } from "./useComments";
+import { useExternalReferences } from "./useExternalReferences";
 import { usePostSearch } from "./usePostSearch";
 import { usePosts } from "./usePosts";
 import { useRelatedPosts } from "./useRelatedPosts";
@@ -35,6 +36,8 @@ export function useBoardController() {
     selectedPostId: postActions.selectedPost?.id ?? null,
     request,
   });
+
+  const externalReferences = useExternalReferences({ request });
 
   const comments = useComments({
     request,
@@ -69,6 +72,7 @@ export function useBoardController() {
       comments.resetComments();
       relatedPosts.resetComposeRelatedPosts();
       relatedPosts.resetEditRelatedPosts();
+      externalReferences.resetComposeExternalReferences();
     }
   }
 
@@ -77,6 +81,7 @@ export function useBoardController() {
     comments.resetComments();
     relatedPosts.resetComposeRelatedPosts();
     relatedPosts.resetEditRelatedPosts();
+    externalReferences.resetComposeExternalReferences();
     await postSearch.loadPosts({ quiet: true });
   }
 
@@ -93,6 +98,7 @@ export function useBoardController() {
   function openCompose() {
     if (auth.currentUser) {
       relatedPosts.resetComposeRelatedPosts();
+      externalReferences.resetComposeExternalReferences();
     }
     postActions.openCompose();
   }
@@ -100,6 +106,7 @@ export function useBoardController() {
   function closeCompose() {
     postActions.closeCompose();
     relatedPosts.resetComposeRelatedPosts();
+    externalReferences.resetComposeExternalReferences();
   }
 
   async function selectPost(post: Post) {
@@ -107,6 +114,7 @@ export function useBoardController() {
     if (selectedPost) {
       relatedPosts.resetComposeRelatedPosts();
       relatedPosts.resetEditRelatedPosts();
+      externalReferences.resetComposeExternalReferences();
       await comments.loadComments(selectedPost.id, { quiet: true });
     }
   }
@@ -115,6 +123,7 @@ export function useBoardController() {
     const createdPost = await postActions.createPost(event);
     if (createdPost) {
       relatedPosts.resetComposeRelatedPosts();
+      externalReferences.resetComposeExternalReferences();
       await postSearch.loadTags({ quiet: true });
       await postSearch.loadPosts({ quiet: true, filters: { page: 1 } });
       await comments.loadComments(createdPost.id, { quiet: true });
@@ -151,6 +160,14 @@ export function useBoardController() {
     await comments.createComment(event);
   }
 
+  async function findComposeExternalReferences() {
+    if (!auth.currentUser) {
+      handleAuthRequired("외부 참고자료 찾기는 로그인이 필요합니다.");
+      return;
+    }
+    await externalReferences.findComposeExternalReferences(postActions.postForm);
+  }
+
   return {
     authView: auth.authView,
     authForm: auth.authForm,
@@ -166,6 +183,7 @@ export function useBoardController() {
     editForm: postActions.editForm,
     composeRelatedPosts: relatedPosts.composeRelatedPosts,
     editRelatedPosts: relatedPosts.editRelatedPosts,
+    composeExternalReferences: externalReferences.composeExternalReferences,
     isEditingPost: postActions.isEditingPost,
     commentForm: comments.commentForm,
     status,
@@ -179,6 +197,7 @@ export function useBoardController() {
     updateEditForm: postActions.updateEditForm,
     updateCommentForm: comments.updateCommentForm,
     updateSearch: postSearch.updateSearch,
+    findComposeExternalReferences,
     openPostEditor,
     closePostEditor,
     goToList,

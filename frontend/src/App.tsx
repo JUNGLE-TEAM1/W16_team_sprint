@@ -85,8 +85,10 @@ export default function App() {
               isOpen={board.isComposeOpen}
               postForm={board.postForm}
               relatedPosts={board.composeRelatedPosts}
+              externalReferences={board.composeExternalReferences}
               onChange={board.updatePostForm}
               onSubmit={board.createPost}
+              onFindExternalReferences={board.findComposeExternalReferences}
               onClose={board.closeCompose}
             />
           </>

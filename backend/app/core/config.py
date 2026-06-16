@@ -40,6 +40,13 @@ class Settings:
     openai_summary_model: str = os.getenv("OPENAI_SUMMARY_MODEL", "gpt-5.4-nano")
     openai_summary_max_output_tokens: int = _int_env("OPENAI_SUMMARY_MAX_OUTPUT_TOKENS", 700)
     langchain_rag_collection_name: str = os.getenv("LANGCHAIN_RAG_COLLECTION_NAME", "post_rag_documents")
+    stack_exchange_api_url: str = os.getenv(
+        "STACK_EXCHANGE_API_URL",
+        "https://api.stackexchange.com/2.3/search/advanced",
+    )
+    stack_exchange_site: str = os.getenv("STACK_EXCHANGE_SITE", "stackoverflow")
+    stack_exchange_api_key: str | None = os.getenv("STACK_EXCHANGE_API_KEY")
+    external_reference_timeout_seconds: float = float(os.getenv("EXTERNAL_REFERENCE_TIMEOUT_SECONDS", "5"))
     cors_origins: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:

@@ -1,17 +1,24 @@
 import type {
+  ExternalReferencesState,
   FieldChangeHandler,
   FormSubmitHandler,
   PostFormState,
   RelatedPostsState,
 } from "../types";
+import {
+  ExternalReferencesPanel,
+  shouldShowExternalReferencesPanel,
+} from "./ExternalReferencesPanel";
 import { RelatedPostsPanel, shouldShowRelatedPostsPanel } from "./RelatedPostsPanel";
 
 interface ComposeModalProps {
   isOpen: boolean;
   postForm: PostFormState;
   relatedPosts: RelatedPostsState;
+  externalReferences: ExternalReferencesState;
   onChange: FieldChangeHandler;
   onSubmit: FormSubmitHandler;
+  onFindExternalReferences: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -19,15 +26,18 @@ export function ComposeModal({
   isOpen,
   postForm,
   relatedPosts,
+  externalReferences,
   onChange,
   onSubmit,
+  onFindExternalReferences,
   onClose,
 }: ComposeModalProps) {
   if (!isOpen) {
     return null;
   }
 
-  const hasRelatedPanel = shouldShowRelatedPostsPanel(relatedPosts);
+  const hasSidePanel =
+    shouldShowRelatedPostsPanel(relatedPosts) || shouldShowExternalReferencesPanel(externalReferences);
 
   return (
     <div className="modal-backdrop">
@@ -42,7 +52,7 @@ export function ComposeModal({
           </button>
         </div>
 
-        <div className={hasRelatedPanel ? "compose-layout has-related" : "compose-layout"}>
+        <div className={hasSidePanel ? "compose-layout has-related" : "compose-layout"}>
           <form className="stack-form" onSubmit={onSubmit}>
             <label className="field">
               <span>Title</span>
@@ -67,11 +77,24 @@ export function ComposeModal({
                 placeholder="fastapi, auth, sprint"
               />
             </label>
+            <div className="compose-ai-actions">
+              <button
+                className="ghost-button compact-button"
+                type="button"
+                disabled={externalReferences.isLoading}
+                onClick={() => void onFindExternalReferences()}
+              >
+                외부 참고자료 찾기
+              </button>
+            </div>
             <button className="submit-button" type="submit">
               게시글 작성
             </button>
           </form>
-          <RelatedPostsPanel state={relatedPosts} />
+          <div className="compose-side-panels">
+            <RelatedPostsPanel state={relatedPosts} />
+            <ExternalReferencesPanel state={externalReferences} />
+          </div>
         </div>
       </section>
     </div>

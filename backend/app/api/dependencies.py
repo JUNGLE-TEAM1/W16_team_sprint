@@ -12,7 +12,12 @@ from backend.app.services.embedding_service import (
     OpenAIEmbeddingProvider,
     PostEmbeddingService,
 )
+from backend.app.services.external_reference_service import (
+    ExternalReferenceProvider,
+    StackExchangeReferenceProvider,
+)
 from backend.app.services.langchain_rag_index import LangChainPostVectorIndex
+from backend.app.services.mcp_service import McpService
 from backend.app.services.post_service import PostService
 from backend.app.services.rag_service import RagService
 from backend.app.services.rag_summary_service import OpenAIRagSummaryProvider, RagSummaryProvider
@@ -24,6 +29,10 @@ def get_embedding_provider() -> EmbeddingProvider:
 
 def get_rag_summary_provider() -> RagSummaryProvider:
     return OpenAIRagSummaryProvider()
+
+
+def get_external_reference_provider() -> ExternalReferenceProvider:
+    return StackExchangeReferenceProvider()
 
 
 def get_post_service(
@@ -63,3 +72,9 @@ def get_rag_service(
         embedding_service=embedding_service,
         summary_provider=summary_provider,
     )
+
+
+def get_mcp_service(
+    external_references: ExternalReferenceProvider = Depends(get_external_reference_provider),
+) -> McpService:
+    return McpService(external_references=external_references)
