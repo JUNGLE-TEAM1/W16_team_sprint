@@ -84,17 +84,8 @@ class PostEmbeddingRepository:
         ensure_pgvector_schema(self.db)
         rows = self.db.execute(
             text(
-                """
-                SELECT
-                    pe.post_id,
-                    1 - (pe.embedding <=> CAST(:query_vector AS vector)) AS score
-                FROM post_embeddings pe
-                JOIN posts p ON p.id = pe.post_id
-                WHERE p.author_name = 'data-bot'
-                  AND pe.embedding IS NOT NULL
-                ORDER BY pe.embedding <=> CAST(:query_vector AS vector)
-                LIMIT :limit
-                """
+                "SELECT post_id, score "
+                "FROM match_support_cards(CAST(:query_vector AS vector), :limit)"
             ),
             {"query_vector": vector_literal(query_vector), "limit": limit},
         ).all()

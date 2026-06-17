@@ -1,13 +1,15 @@
 from types import SimpleNamespace
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from backend.app.db.base import Base
 from backend.app.db.seeds import seed_demo_users, seed_support_cards
 from backend.app.db.session import engine
+from backend.app.db.vector import vector_literal
 from backend.app.main import app
 from backend.app.models.post import Post
 from backend.app.models.post_embedding import PostEmbedding
@@ -100,6 +102,38 @@ def test_rag_assist_scores_financial_need_above_generic_cards() -> None:
     assert body["mvp_highlight"]["post_id"] == body["matches"][0]["post_id"]
     assert "매칭률" in body["mvp_highlight"]["why_highlight"]
     assert all("창업" not in match["title"] for match in body["matches"][:1])
+
+
+def test_pgvector_match_support_cards_rpc_is_available() -> None:
+    if engine.dialect.name != "postgresql":
+        pytest.skip("pgvector RPC is only created for PostgreSQL")
+
+    query_vector = vector_literal([1.0] + [0.0] * 1535)
+    with Session(engine) as db:
+        exists = db.execute(
+            text("SELECT count(*) FROM pg_proc WHERE proname = 'match_support_cards'")
+        ).scalar_one()
+        hnsw_index = db.execute(
+            text(
+                "SELECT indexdef FROM pg_indexes "
+                "WHERE tablename = 'post_embeddings' "
+                "AND indexname = 'ix_post_embeddings_embedding_hnsw'"
+            )
+        ).scalar_one_or_none()
+        rows = db.execute(
+            text(
+                "SELECT post_id, score "
+                "FROM match_support_cards(CAST(:query_vector AS vector), :limit)"
+            ),
+            {"query_vector": query_vector, "limit": 3},
+        ).all()
+
+    assert exists >= 1
+    assert hnsw_index is not None
+    assert "USING hnsw" in hnsw_index
+    assert "vector_cosine_ops" in hnsw_index
+    assert rows
+    assert all(row.post_id for row in rows)
 
 
 def test_rag_assist_uses_openai_llm_when_api_key_is_configured(monkeypatch) -> None:
