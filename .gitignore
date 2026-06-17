@@ -1,0 +1,19 @@
+.env
+*.pyc
+__pycache__/
+.pytest_cache/
+.venv/
+node_modules/
+dist/
+.DS_Store
+
+# Private data bundles and generated database/vector artifacts.
+data/*
+!data/.gitkeep
+!data/README.md
+*.dump
+*.sql
+*.sqlite
+*.db
+*.faiss
+*.index
