@@ -32,12 +32,12 @@ class PostRepository:
         comment_count = self._comment_count_expression()
         statement = select(Post, comment_count.label("comment_count")).join(Post.author)
         count_statement = select(func.count(func.distinct(Post.id))).select_from(Post).join(Post.author)
-        support_conditions = [
+        public_question_conditions = [
             Post.visibility == "public",
-            Post.post_type.in_(["policy", "facility"]),
+            Post.post_type == "case",
         ]
-        statement = statement.where(*support_conditions)
-        count_statement = count_statement.where(*support_conditions)
+        statement = statement.where(*public_question_conditions)
+        count_statement = count_statement.where(*public_question_conditions)
 
         if tag:
             statement = statement.join(Post.tag_entities)
@@ -109,7 +109,7 @@ class PostRepository:
         conditions = [
             Post.author_id == author_id,
             Post.post_type == "case",
-            Post.visibility == "private",
+            Post.visibility == "public",
         ]
         statement = (
             select(Post, comment_count.label("comment_count"))

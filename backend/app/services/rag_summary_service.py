@@ -68,10 +68,10 @@ class OpenAIRagSummaryProvider:
 
         return "\n\n".join(
             [
-                "너는 AI 생활지원 매칭 보드의 RAG 추천 요약 도우미다.",
-                "사용자의 개인 상담 요청과 관련 있는 공공데이터 기반 지원 카드 또는 공공시설 카드를 보고 각 항목마다 한국어 summary를 작성한다.",
+                "너는 게시판 RAG 추천 요약 도우미다.",
+                "사용자 입력과 관련 있는 공개 참고 게시글을 보고 각 항목마다 한국어 summary를 작성한다.",
                 "각 summary는 2-3문장으로 작성하고, 왜 관련 있는지와 사용자가 추가로 확인해야 할 조건을 함께 담는다.",
-                "지원 가능성을 확정 판정하지 말고, 제공된 카드 내용에 근거한 참고 정보로만 작성한다.",
+                "확정 판정을 하지 말고, 제공된 내용에 근거한 참고 정보로만 작성한다.",
                 '반드시 JSON 배열만 반환한다. 예: [{"post_id":1,"summary":"..."}]',
                 "사용자가 작성 중인 개인 상담 요청:",
                 f"type: {payload.post_type}",
@@ -79,7 +79,7 @@ class OpenAIRagSummaryProvider:
                 f"content: {payload.content}",
                 f"region: {payload.region or ''}",
                 f"tags: {', '.join(payload.tags)}",
-                "관련 지원/시설 카드 목록:",
+                "관련 공개 참고 글 목록:",
                 "\n\n---\n\n".join(related_post_blocks),
             ]
         )

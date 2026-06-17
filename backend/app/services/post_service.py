@@ -11,6 +11,7 @@ from backend.app.core.errors import AppError
 from backend.app.models.post import Post
 from backend.app.models.post_like import PostLike
 from backend.app.repositories.embedding_repository import PostEmbeddingRepository
+from backend.app.repositories.pet_care_advice_repository import PetCareAdviceRepository
 from backend.app.repositories.post_repository import PostRepository
 from backend.app.repositories.tag_repository import TagRepository
 from backend.app.schemas.post import PostCreate, PostPage, PostSearchType, PostSortType, PostUpdate
@@ -27,6 +28,7 @@ class PostService:
         posts: PostRepository,
         tags: TagRepository | None = None,
         embeddings: PostEmbeddingRepository | None = None,
+        pet_care_advices: PetCareAdviceRepository | None = None,
         embedding_service: PostEmbeddingService | None = None,
         rag_index: LangChainPostVectorIndex | None = None,
     ) -> None:
@@ -34,6 +36,7 @@ class PostService:
         self.posts = posts
         self.tags = tags
         self.embeddings = embeddings
+        self.pet_care_advices = pet_care_advices
         self.embedding_service = embedding_service
         self.rag_index = rag_index
 
@@ -93,7 +96,7 @@ class PostService:
         if post is None or not self._can_view(post, viewer_id):
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
+                message="상담 질문을 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )
@@ -108,12 +111,15 @@ class PostService:
 
         changes = payload.model_dump(exclude_unset=True)
         tag_names = changes.pop("tags", None)
+        should_mark_advice_stale = self._should_mark_advice_stale(changes, tag_names)
         changes.update(self._default_policy_for_type(changes.get("post_type", post.post_type)))
         for field, value in changes.items():
             setattr(post, field, value)
         if tag_names is not None:
             post.tag_entities = self._get_tags(tag_names)
 
+        if should_mark_advice_stale and self.pet_care_advices is not None:
+            self.pet_care_advices.mark_stale(post.id)
         if self._embedding_content_changed(post, before_embedding_hash):
             self._sync_embedding(post)
         elif not self._is_rag_indexable(post):
@@ -127,7 +133,7 @@ class PostService:
         if post.visibility != "public":
             raise AppError(
                 code="POST_LIKE_DISABLED",
-                message="비공개 상담 요청에는 관심 등록을 할 수 없습니다.",
+                message="공개 상담 질문에만 관심 등록을 할 수 있습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"post_id": post_id},
             )
@@ -165,7 +171,7 @@ class PostService:
     def _not_found(post_id: int) -> AppError:
         return AppError(
             code="POST_NOT_FOUND",
-            message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
+            message="상담 질문을 찾을 수 없습니다.",
             status_code=status.HTTP_404_NOT_FOUND,
             details={"post_id": post_id},
         )
@@ -180,8 +186,8 @@ class PostService:
                 "rag_scope": "public",
             }
         return {
-            "visibility": "private",
-            "comment_policy": "none",
+            "visibility": "public",
+            "comment_policy": "public",
             "rag_scope": "excluded",
         }
 
@@ -261,3 +267,8 @@ class PostService:
             and post.rag_scope == "public"
             and post.post_type in {"policy", "facility"}
         )
+
+    @staticmethod
+    def _should_mark_advice_stale(changes: dict, tag_names: list[str] | None) -> bool:
+        advice_sensitive_fields = {"title", "content", "region"}
+        return tag_names is not None or any(field in changes for field in advice_sensitive_fields)

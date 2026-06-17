@@ -1,9 +1,7 @@
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_embedding_provider
-from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.main import app
 from backend.app.models.post_embedding import (
@@ -13,6 +11,7 @@ from backend.app.models.post_embedding import (
     PostEmbedding,
 )
 from backend.app.services.embedding_service import MockEmbeddingProvider
+from backend.tests.db_reset import reset_app_data_only
 
 
 class FailingEmbeddingProvider:
@@ -22,10 +21,7 @@ class FailingEmbeddingProvider:
 
 def setup_function() -> None:
     app.dependency_overrides.clear()
-    with engine.begin() as connection:
-        connection.execute(text("DROP TABLE IF EXISTS refresh_tokens CASCADE"))
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    reset_app_data_only(engine)
 
 
 def register_and_login(client: TestClient) -> None:

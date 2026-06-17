@@ -1,16 +1,12 @@
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 
-from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.main import app
+from backend.tests.db_reset import reset_app_data_only
 
 
 def setup_function() -> None:
-    with engine.begin() as connection:
-        connection.execute(text("DROP TABLE IF EXISTS refresh_tokens CASCADE"))
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    reset_app_data_only(engine)
 
 
 def register_user(client: TestClient) -> None:

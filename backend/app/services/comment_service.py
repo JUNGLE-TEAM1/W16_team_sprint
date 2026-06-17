@@ -24,14 +24,14 @@ class CommentService:
         if post.comment_policy == "none":
             raise AppError(
                 code="COMMENTS_DISABLED",
-                message="이 항목에는 상담 메모를 작성할 수 없습니다.",
+                message="이 상담 질문에는 댓글을 작성할 수 없습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"post_id": post_id},
             )
         if post.comment_policy == "private" and post.author_id != author_id:
             raise AppError(
                 code="COMMENTS_FORBIDDEN",
-                message="작성자만 이 상담 요청에 메모를 남길 수 있습니다.",
+                message="작성자만 이 상담 질문에 댓글을 남길 수 있습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"post_id": post_id},
             )
@@ -55,14 +55,14 @@ class CommentService:
         if comment is None:
             raise AppError(
                 code="COMMENT_NOT_FOUND",
-                message="상담 메모를 찾을 수 없습니다.",
+                message="댓글을 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"comment_id": comment_id},
             )
         if comment.author_id != author_id:
             raise AppError(
                 code="COMMENT_FORBIDDEN",
-                message="상담 메모 작성자만 삭제할 수 있습니다.",
+                message="댓글 작성자만 삭제할 수 있습니다.",
                 status_code=status.HTTP_403_FORBIDDEN,
                 details={"comment_id": comment_id},
             )
@@ -75,7 +75,7 @@ class CommentService:
         if post is None:
             raise AppError(
                 code="POST_NOT_FOUND",
-                message="지원 카드 또는 상담 케이스를 찾을 수 없습니다.",
+                message="상담 질문을 찾을 수 없습니다.",
                 status_code=status.HTTP_404_NOT_FOUND,
                 details={"post_id": post_id},
             )

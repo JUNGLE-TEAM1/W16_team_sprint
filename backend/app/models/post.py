@@ -49,6 +49,11 @@ class Post(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    pet_care_advice: Mapped["PetCareAdvice | None"] = relationship(
+        back_populates="post",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     @property
     def author_display_name(self) -> str:

@@ -40,13 +40,16 @@ class Settings:
     openai_summary_model: str = os.getenv("OPENAI_SUMMARY_MODEL", "gpt-5.4-nano")
     openai_summary_max_output_tokens: int = _int_env("OPENAI_SUMMARY_MAX_OUTPUT_TOKENS", 700)
     langchain_rag_collection_name: str = os.getenv("LANGCHAIN_RAG_COLLECTION_NAME", "post_rag_documents")
-    stack_exchange_api_url: str = os.getenv(
-        "STACK_EXCHANGE_API_URL",
-        "https://api.stackexchange.com/2.3/search/advanced",
+    pet_care_rag_collection_name: str = os.getenv("PET_CARE_RAG_COLLECTION_NAME", "pet_care_knowledge")
+    pet_care_advice_model: str = os.getenv("PET_CARE_ADVICE_MODEL", "gpt-5.4-nano")
+    pet_care_advice_max_output_tokens: int = _int_env("PET_CARE_ADVICE_MAX_OUTPUT_TOKENS", 1200)
+    aihub_pet_care_data_dir: str = os.getenv(
+        "AIHUB_PET_CARE_DATA_DIR",
+        "/Users/liamtsy/Downloads/59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터",
     )
-    stack_exchange_site: str = os.getenv("STACK_EXCHANGE_SITE", "stackoverflow")
-    stack_exchange_api_key: str | None = os.getenv("STACK_EXCHANGE_API_KEY")
-    external_reference_timeout_seconds: float = float(os.getenv("EXTERNAL_REFERENCE_TIMEOUT_SECONDS", "5"))
+    kakao_rest_api_key: str | None = os.getenv("KAKAO_REST_API_KEY")
+    kakao_local_api_base_url: str = os.getenv("KAKAO_LOCAL_API_BASE_URL", "https://dapi.kakao.com")
+    kakao_local_timeout_seconds: float = float(os.getenv("KAKAO_LOCAL_TIMEOUT_SECONDS", "5"))
     cors_origins: list[str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:

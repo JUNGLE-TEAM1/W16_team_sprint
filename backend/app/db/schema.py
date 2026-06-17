@@ -56,12 +56,28 @@ def ensure_development_schema(engine: Engine) -> None:
         )
         connection.execute(
             text(
-                "UPDATE posts SET visibility = 'private', comment_policy = 'none', rag_scope = 'excluded' "
+                "UPDATE posts SET visibility = 'public', comment_policy = 'public', rag_scope = 'excluded' "
                 "WHERE post_type = 'case'"
             )
         )
 
     if "post_embeddings" not in table_names:
+        post_embeddings_exists = False
+    else:
+        post_embeddings_exists = True
+
+    if "pet_care_advices" in table_names:
+        advice_columns = {column["name"] for column in inspector.get_columns("pet_care_advices")}
+        with engine.begin() as connection:
+            if "hospital_candidates" not in advice_columns:
+                connection.execute(
+                    text(
+                        "ALTER TABLE pet_care_advices "
+                        "ADD COLUMN hospital_candidates JSON NOT NULL DEFAULT '[]'"
+                    )
+                )
+
+    if not post_embeddings_exists:
         return
 
     embedding_columns = {column["name"] for column in inspector.get_columns("post_embeddings")}
