@@ -332,11 +332,9 @@ GET /annals/search?query=태조 즉위&limit=3
 
 ## 11. 실행 방법
 
-### 1. 공개 저장소와 비공개 데이터 분리
+### 1. RAG 데이터 bundle
 
-이 저장소에는 애플리케이션 코드만 올립니다.
-
-다음 파일은 팀 내부에서만 따로 공유하고 GitHub에는 올리지 않습니다.
+이 저장소에는 애플리케이션 코드와 실행용 RAG bundle을 함께 둡니다.
 
 ```text
 data/annals_private_bundle.zip
@@ -362,12 +360,6 @@ cp .env.example .env
 
 ```text
 OPENAI_API_KEY=...
-```
-
-팀 내부에서 받은 zip을 다음 위치에 둡니다.
-
-```text
-data/annals_private_bundle.zip
 ```
 
 그 다음 한 번에 실행합니다.

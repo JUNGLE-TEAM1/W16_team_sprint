@@ -6,7 +6,9 @@ Put the team-only bundle here:
 data/annals_private_bundle.zip
 ```
 
-This directory is intentionally ignored by Git except for this README and `.gitkeep`.
+This repository includes `annals_private_bundle.zip` so teammates can run RAG immediately after cloning.
+
+Other generated data files in this directory are still ignored by Git.
 
 The zip should contain precomputed RAG data:
 
