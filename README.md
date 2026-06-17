@@ -80,6 +80,8 @@
 
 ## 5. 아키텍처
 
+상세 Mermaid 다이어그램은 [`docs/architecture.md`](docs/architecture.md)에 정리되어 있습니다.
+
 ```text
 React
   └─ 사용자가 글 작성 / 목록 조회 / 댓글 작성 / 태그 클릭
