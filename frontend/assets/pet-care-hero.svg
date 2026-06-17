@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" role="img" aria-labelledby="title desc">
+  <title id="title">Warm dog care illustration</title>
+  <desc id="desc">A friendly dog beside pet-care cards and a soft yellow background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff4bf"/>
+      <stop offset="1" stop-color="#ffe1a6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fff8e5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#8a5b18" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="760" height="520" rx="36" fill="url(#bg)"/>
+  <circle cx="112" cy="94" r="44" fill="#ffd86e" opacity=".5"/>
+  <circle cx="656" cy="118" r="58" fill="#f8b86a" opacity=".36"/>
+  <circle cx="604" cy="416" r="78" fill="#cdeac0" opacity=".44"/>
+
+  <g filter="url(#shadow)">
+    <rect x="84" y="92" width="260" height="150" rx="26" fill="url(#card)"/>
+    <rect x="116" y="126" width="142" height="16" rx="8" fill="#f6bd4a"/>
+    <rect x="116" y="158" width="184" height="12" rx="6" fill="#dec79b"/>
+    <rect x="116" y="184" width="126" height="12" rx="6" fill="#dec79b"/>
+    <circle cx="288" cy="169" r="34" fill="#7bbf8a"/>
+    <path d="M270 172c8 14 28 17 40 2" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="418" y="82" width="230" height="120" rx="26" fill="#fffdf7"/>
+    <rect x="450" y="116" width="98" height="14" rx="7" fill="#6ea47b"/>
+    <rect x="450" y="146" width="154" height="11" rx="6" fill="#e5cc9b"/>
+    <rect x="450" y="169" width="122" height="11" rx="6" fill="#e5cc9b"/>
+  </g>
+
+  <g transform="translate(190 166)" filter="url(#shadow)">
+    <ellipse cx="210" cy="218" rx="190" ry="58" fill="#d2a96a" opacity=".2"/>
+    <path d="M150 115c-18-45-66-70-98-52-25 14-26 52-5 82 22 30 65 39 103 14z" fill="#7b512c"/>
+    <path d="M326 115c18-45 66-70 98-52 25 14 26 52 5 82-22 30-65 39-103 14z" fill="#7b512c"/>
+    <path d="M84 154c0-78 62-132 153-132s153 54 153 132c0 91-68 165-153 165S84 245 84 154z" fill="#c9833c"/>
+    <path d="M115 157c0-57 48-97 122-97s122 40 122 97c0 74-54 128-122 128s-122-54-122-128z" fill="#f2bf73"/>
+    <ellipse cx="181" cy="153" rx="16" ry="19" fill="#362414"/>
+    <ellipse cx="293" cy="153" rx="16" ry="19" fill="#362414"/>
+    <ellipse cx="176" cy="147" rx="5" ry="6" fill="#ffffff" opacity=".9"/>
+    <ellipse cx="288" cy="147" rx="5" ry="6" fill="#ffffff" opacity=".9"/>
+    <path d="M222 188c8-9 23-9 31 0 6 7 1 19-15 20-16-1-22-13-16-20z" fill="#4b2f1c"/>
+    <path d="M238 207c0 20-21 33-43 18" fill="none" stroke="#5d3720" stroke-width="8" stroke-linecap="round"/>
+    <path d="M238 207c0 20 21 33 43 18" fill="none" stroke="#5d3720" stroke-width="8" stroke-linecap="round"/>
+    <path d="M209 250c20 16 49 16 69 0" fill="none" stroke="#5d3720" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="143" cy="190" r="23" fill="#f4a37b" opacity=".55"/>
+    <circle cx="331" cy="190" r="23" fill="#f4a37b" opacity=".55"/>
+  </g>
+
+  <g opacity=".72">
+    <circle cx="96" cy="390" r="12" fill="#9b6b2f"/>
+    <circle cx="128" cy="368" r="10" fill="#9b6b2f"/>
+    <circle cx="158" cy="390" r="12" fill="#9b6b2f"/>
+    <ellipse cx="128" cy="414" rx="35" ry="25" fill="#9b6b2f"/>
+  </g>
+</svg>

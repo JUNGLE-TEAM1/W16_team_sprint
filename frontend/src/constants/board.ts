@@ -10,9 +10,9 @@ export const CARD_THEMES = [
 ];
 
 export const POST_TYPE_LABELS: Record<PostType, string> = {
-  policy: "지원 카드",
-  facility: "시설 카드",
-  case: "내 상담 요청",
+  policy: "참고 문서",
+  facility: "보호소 정보",
+  case: "상담 질문",
 };
 
 export const SEARCH_TYPES: Array<{ value: SearchType; label: string }> = [
@@ -24,6 +24,6 @@ export const SEARCH_TYPES: Array<{ value: SearchType; label: string }> = [
 
 export const SORT_TYPES: Array<{ value: SortType; label: string }> = [
   { value: "latest", label: "최신순" },
-  { value: "comment_count", label: "메모 많은 순" },
+  { value: "comment_count", label: "댓글 많은 순" },
   { value: "like_count", label: "관심 많은 순" },
 ];

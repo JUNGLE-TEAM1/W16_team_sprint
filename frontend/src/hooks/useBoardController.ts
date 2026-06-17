@@ -6,10 +6,9 @@ import { useApiRequest } from "./useApiRequest";
 import { useAuth } from "./useAuth";
 import { useComments } from "./useComments";
 import { useConsultations } from "./useConsultations";
-import { useExternalReferences } from "./useExternalReferences";
+import { usePetCareAdvice } from "./usePetCareAdvice";
 import { usePostSearch } from "./usePostSearch";
 import { usePosts } from "./usePosts";
-import { useRelatedPosts } from "./useRelatedPosts";
 
 export function useBoardController() {
   const { status, setStatus, request } = useApiRequest();
@@ -30,17 +29,11 @@ export function useBoardController() {
     setStatus,
   });
 
-  const relatedPosts = useRelatedPosts({
-    isAuthenticated: Boolean(auth.currentUser),
-    isComposeOpen: postActions.isComposeOpen,
-    postForm: postActions.postForm,
-    isEditingPost: postActions.isEditingPost,
-    editForm: postActions.editForm,
-    selectedPostId: postActions.selectedPost?.id ?? null,
+  const petCareAdvice = usePetCareAdvice({
     request,
+    isAuthenticated: Boolean(auth.currentUser),
+    onAuthRequired: handleAuthRequired,
   });
-
-  const externalReferences = useExternalReferences({ request });
 
   const comments = useComments({
     request,
@@ -78,18 +71,12 @@ export function useBoardController() {
       postActions.clearDetail();
       comments.resetComments();
       consultations.resetConsultations();
-      relatedPosts.resetComposeRelatedPosts();
-      relatedPosts.resetEditRelatedPosts();
-      externalReferences.resetComposeExternalReferences();
     }
   }
 
   async function goToList() {
     postActions.clearDetail();
     comments.resetComments();
-    relatedPosts.resetComposeRelatedPosts();
-    relatedPosts.resetEditRelatedPosts();
-    externalReferences.resetComposeExternalReferences();
     if (activeView === "consultations") {
       await consultations.loadConsultations({ quiet: true });
     } else {
@@ -101,9 +88,6 @@ export function useBoardController() {
     setActiveView("support");
     postActions.clearDetail();
     comments.resetComments();
-    relatedPosts.resetComposeRelatedPosts();
-    relatedPosts.resetEditRelatedPosts();
-    externalReferences.resetComposeExternalReferences();
     await postSearch.loadPosts({ quiet: true });
   }
 
@@ -111,13 +95,10 @@ export function useBoardController() {
     setActiveView("consultations");
     postActions.clearDetail();
     comments.resetComments();
-    relatedPosts.resetComposeRelatedPosts();
-    relatedPosts.resetEditRelatedPosts();
-    externalReferences.resetComposeExternalReferences();
 
     if (!auth.currentUser) {
       consultations.resetConsultations();
-      handleAuthRequired("내 상담 기록은 로그인이 필요합니다.");
+      handleAuthRequired("내 질문은 로그인이 필요합니다.");
       return;
     }
     await consultations.loadConsultations({ page: 1 });
@@ -125,34 +106,24 @@ export function useBoardController() {
 
   function openPostEditor() {
     postActions.openPostEditor();
-    relatedPosts.resetEditRelatedPosts();
   }
 
   function closePostEditor() {
     postActions.closePostEditor();
-    relatedPosts.resetEditRelatedPosts();
   }
 
   function openCompose() {
-    if (auth.currentUser) {
-      relatedPosts.resetComposeRelatedPosts();
-      externalReferences.resetComposeExternalReferences();
-    }
     postActions.openCompose();
   }
 
   function closeCompose() {
     postActions.closeCompose();
-    relatedPosts.resetComposeRelatedPosts();
-    externalReferences.resetComposeExternalReferences();
   }
 
   async function selectPost(post: Post) {
     const selectedPost = await postActions.selectPost(post);
     if (selectedPost) {
-      relatedPosts.resetComposeRelatedPosts();
-      relatedPosts.resetEditRelatedPosts();
-      externalReferences.resetComposeExternalReferences();
+      await petCareAdvice.loadForPost(selectedPost);
       if (selectedPost.comment_policy !== "none") {
         await comments.loadComments(selectedPost.id, { quiet: true });
       } else {
@@ -164,31 +135,31 @@ export function useBoardController() {
   async function createPost(event: FormEvent<HTMLFormElement>) {
     const createdPost = await postActions.createPost(event);
     if (createdPost) {
-      setActiveView("consultations");
-      relatedPosts.resetComposeRelatedPosts();
-      externalReferences.resetComposeExternalReferences();
+      setActiveView("support");
       await postSearch.loadTags({ quiet: true });
-      await consultations.loadConsultations({ quiet: true, page: 1 });
+      await postSearch.loadPosts({ quiet: true });
       if (createdPost.comment_policy !== "none") {
         await comments.loadComments(createdPost.id, { quiet: true });
       }
+      await petCareAdvice.generateForCreatedPost(createdPost);
     }
   }
 
   async function updatePost(event: FormEvent<HTMLFormElement>) {
     const updatedPost = await postActions.updatePost(event);
     if (updatedPost) {
-      relatedPosts.resetEditRelatedPosts();
+      await petCareAdvice.loadForPost(updatedPost);
       await postSearch.loadTags({ quiet: true });
       await postSearch.loadPosts({ quiet: true });
     }
   }
 
   async function deletePost() {
+    const selectedId = postActions.selectedPost?.id ?? null;
     const deleted = await postActions.deletePost();
     if (deleted) {
+      petCareAdvice.clearAdvice(selectedId);
       comments.resetComments();
-      relatedPosts.resetEditRelatedPosts();
       await postSearch.loadTags({ quiet: true });
       if (activeView === "consultations") {
         await consultations.loadConsultations({ quiet: true });
@@ -209,12 +180,11 @@ export function useBoardController() {
     await comments.createComment(event);
   }
 
-  async function findComposeExternalReferences() {
-    if (!auth.currentUser) {
-      handleAuthRequired("외부 참고자료 찾기는 로그인이 필요합니다.");
+  async function generateAdviceForSelectedPost() {
+    if (!postActions.selectedPost) {
       return;
     }
-    await externalReferences.findComposeExternalReferences(postActions.postForm);
+    await petCareAdvice.generateForPost(postActions.selectedPost);
   }
 
   async function changeConsultationPage(nextPage: number) {
@@ -237,9 +207,7 @@ export function useBoardController() {
     consultationPageMeta: consultations.consultationPageMeta,
     postForm: postActions.postForm,
     editForm: postActions.editForm,
-    composeRelatedPosts: relatedPosts.composeRelatedPosts,
-    editRelatedPosts: relatedPosts.editRelatedPosts,
-    composeExternalReferences: externalReferences.composeExternalReferences,
+    petCareAdviceState: petCareAdvice.getAdviceState(postActions.selectedPost?.id ?? null),
     isEditingPost: postActions.isEditingPost,
     commentForm: comments.commentForm,
     status,
@@ -253,7 +221,7 @@ export function useBoardController() {
     updateEditForm: postActions.updateEditForm,
     updateCommentForm: comments.updateCommentForm,
     updateSearch: postSearch.updateSearch,
-    findComposeExternalReferences,
+    generateAdviceForSelectedPost,
     openPostEditor,
     closePostEditor,
     goToList,

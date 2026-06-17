@@ -24,8 +24,8 @@ export function TopBar({
   return (
     <header className="topbar">
       <button className="brand-button" type="button" onClick={onLogoClick}>
-        <span className="brand-symbol">복지</span>
-        <span>AI 생활지원 매칭 보드</span>
+        <span className="brand-symbol">DOG</span>
+        <span>AI 반려견 케어 상담 보드</span>
       </button>
 
       <div className="topbar-right">
@@ -35,14 +35,14 @@ export function TopBar({
             type="button"
             onClick={onShowSupport}
           >
-            지원 정보
+            상담 질문
           </button>
           <button
             className={activeView === "consultations" ? "nav-button primary-nav" : "nav-button"}
             type="button"
             onClick={onShowConsultations}
           >
-            내 상담 기록
+            내 질문
           </button>
         </nav>
 

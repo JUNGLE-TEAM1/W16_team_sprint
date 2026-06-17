@@ -68,7 +68,7 @@ export function usePostSearch({ request }: UsePostSearchOptions) {
 
     const result = await request<PostPage>(`/api/v1/posts?${buildPostQuery(nextSearch)}`, {
       quiet: options.quiet,
-      successMessage: "지원 정보 목록을 불러왔습니다.",
+      successMessage: "상담 질문 목록을 불러왔습니다.",
     });
     if (result.ok && Array.isArray(result.data.items)) {
       setPosts(result.data.items);

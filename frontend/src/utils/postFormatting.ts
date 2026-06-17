@@ -52,17 +52,6 @@ export function buildRelatedPostsPayload(form: PostFormState, excludePostId?: nu
   };
 }
 
-export function buildExternalReferencesPayload(form: PostFormState) {
-  return {
-    title: form.title.trim(),
-    content: form.content.trim(),
-    tags: parseTags(form.tags),
-    post_type: form.post_type,
-    region: emptyToNull(form.region),
-    limit: 3,
-  };
-}
-
 function emptyToNull(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;

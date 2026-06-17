@@ -35,7 +35,7 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
       });
       const data = (await response.json()) as Post;
       if (!response.ok) {
-        throw new Error("지원 카드 상세를 불러오지 못했습니다.");
+        throw new Error("참고 글 상세를 불러오지 못했습니다.");
       }
       setPreviewPost(data);
       setPreviewStatus({ postId, isLoading: false, errorText: "" });
@@ -43,7 +43,7 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
       setPreviewStatus({
         postId,
         isLoading: false,
-        errorText: "지원 카드 상세를 불러오지 못했습니다.",
+        errorText: "참고 글 상세를 불러오지 못했습니다.",
       });
     }
   }
@@ -105,7 +105,7 @@ export function RelatedPostsPanel({ state }: RelatedPostsPanelProps) {
             <div className="section-heading compact-heading">
               <div>
                 <p className="eyebrow">Related Support</p>
-                <h2>{previewPost?.title || "지원 카드 불러오는 중"}</h2>
+                <h2>{previewPost?.title || "참고 글 불러오는 중"}</h2>
               </div>
               <button className="ghost-button" type="button" onClick={closePostPreview}>
                 닫기

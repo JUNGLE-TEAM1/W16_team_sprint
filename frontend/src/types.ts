@@ -121,38 +121,47 @@ export interface RelatedPostsState {
   errorText: string;
 }
 
-export interface ExternalReference {
+export interface PetCareSource {
+  chunk_id: number;
+  document_id: number;
   title: string;
-  url: string;
-  source: string;
-  summary: string;
-  tags: string[];
-  score: number | null;
-  answer_count: number | null;
-  is_answered: boolean | null;
+  content_preview: string;
+  question: string | null;
+  answer_preview: string | null;
+  department: string | null;
+  disease: string | null;
+  life_cycle: string | null;
+  source_kind: string;
+  split: string;
+  similarity: number;
 }
 
-export interface ExternalReferencesState {
-  items: ExternalReference[];
+export interface PetCareAdvice {
+  id: number | null;
+  post_id: number | null;
+  status: "completed" | "stale";
+  generated_at: string | null;
+  answer: string;
+  action_plan: string[];
+  safety_note: string;
+  sources: PetCareSource[];
+  hospital_candidates: PetCareHospitalCandidate[];
+}
+
+export interface PetCareHospitalCandidate {
+  name: string;
+  address: string | null;
+  road_address: string | null;
+  phone: string | null;
+  distance_meters: number | null;
+  place_url: string | null;
+  source: string;
+}
+
+export interface PetCareAdviceState {
+  advice: PetCareAdvice | null;
   isLoading: boolean;
   errorText: string;
-}
-
-export interface ExternalReferencesJsonRpcResponse {
-  jsonrpc: "2.0";
-  id: string;
-  result?: {
-    tool: string;
-    content: Array<{ type: string; text: string }>;
-    structuredContent?: {
-      items: ExternalReference[];
-    };
-  };
-  error?: {
-    code: number;
-    message: string;
-    data?: unknown;
-  };
 }
 
 export interface LoginResponse {

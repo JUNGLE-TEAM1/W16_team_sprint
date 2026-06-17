@@ -72,11 +72,11 @@ export function PostList({
   onChangePage: (nextPage: number) => void;
 }) {
   return (
-    <section className="posts-section" aria-label="지원 정보 목록">
+    <section className="posts-section" aria-label="상담 질문 목록">
       <div className="section-heading list-heading">
         <div>
-          <p className="eyebrow">Support Information</p>
-          <h2>지원 정보</h2>
+          <p className="eyebrow">Public Questions</p>
+          <h2>상담 질문</h2>
         </div>
         <div className="section-actions">
           <span className="count-chip">
@@ -93,7 +93,7 @@ export function PostList({
             </select>
           </label>
           <button className="submit-button compact-button" type="button" onClick={onOpenCompose}>
-            상담 등록
+            질문 작성
           </button>
         </div>
       </div>
@@ -112,8 +112,8 @@ export function PostList({
         </div>
       ) : (
         <div className="empty-state">
-          <strong>조건에 맞는 지원 카드가 없습니다.</strong>
-          <span>검색어, 지역, 태그 필터를 조정해보세요.</span>
+          <strong>조건에 맞는 상담 질문이 없습니다.</strong>
+          <span>검색어와 태그 필터를 조정해보세요.</span>
         </div>
       )}
 

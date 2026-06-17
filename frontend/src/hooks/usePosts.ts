@@ -43,10 +43,10 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [postForm, setPostForm] = useState<PostFormState>({
     ...emptyConsultationForm(),
-    title: "서울 거주 24세 취준생 지원 찾기",
-    content: "서울에 거주하는 24세 취업준비생입니다. 월세 부담이 크고 소득이 없어 받을 수 있는 청년 주거, 취업, 상담 지원을 찾고 싶습니다.",
-    tags: "청년, 주거, 취업, 서울",
-    region: "서울",
+    title: "강아지가 켁켁 기침을 반복합니다",
+    content: "5개월 된 말티푸가 최근 켁켁거리는 기침을 반복합니다. 식욕은 조금 줄었고 활력은 평소와 비슷합니다. 병원에 바로 가야 하는지 궁금합니다.",
+    tags: "기침, 자견, 내과",
+    region: "서울 마포구",
   });
   const [editForm, setEditForm] = useState<PostFormState>(emptyConsultationForm);
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -93,7 +93,7 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
 
   function openCompose() {
     if (!currentUser) {
-      onAuthRequired("상담 등록은 로그인이 필요합니다.");
+      onAuthRequired("질문 작성은 로그인이 필요합니다.");
       return;
     }
     setIsComposeOpen(true);
@@ -105,7 +105,7 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
 
   async function selectPost(post: Post) {
     const result = await request<Post>(`/api/v1/posts/${post.id}`, {
-      successMessage: "지원 카드 상세를 불러왔습니다.",
+      successMessage: "상담 질문 상세를 불러왔습니다.",
     });
     if (result.ok) {
       setSelectedPost(result.data);
@@ -120,14 +120,14 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
   async function createPost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentUser) {
-      onAuthRequired("상담 등록은 로그인이 필요합니다.");
+      onAuthRequired("질문 작성은 로그인이 필요합니다.");
       return null;
     }
 
     const result = await request<Post>("/api/v1/posts", {
       method: "POST",
       body: buildPostBody(postForm),
-      successMessage: "상담을 등록했습니다.",
+      successMessage: "질문을 등록했습니다.",
     });
     if (result.ok) {
       setPostForm(emptyConsultationForm());
@@ -143,7 +143,7 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
   async function updatePost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedPost) {
-      setStatus({ text: "수정할 지원 카드나 상담 요청을 선택하세요.", isError: true });
+      setStatus({ text: "수정할 상담 질문을 선택하세요.", isError: true });
       return null;
     }
 
@@ -163,20 +163,17 @@ export function usePosts({ request, currentUser, onAuthRequired, setStatus }: Us
 
   async function deletePost() {
     if (!selectedPost) {
-      setStatus({ text: "삭제할 지원 카드나 상담 요청을 선택하세요.", isError: true });
+      setStatus({ text: "삭제할 상담 질문을 선택하세요.", isError: true });
       return false;
     }
-    const message =
-      selectedPost.post_type === "case"
-        ? "상담 기록을 삭제할까요? 이후 연결될 AI 답변도 함께 삭제되는 흐름으로 처리합니다."
-        : "이 지원 카드를 삭제할까요?";
+    const message = "상담 질문을 삭제할까요? 화면에 표시된 AI 답변도 함께 사라집니다.";
     if (!window.confirm(message)) {
       return false;
     }
 
     const result = await request<Record<string, never>>(`/api/v1/posts/${selectedPost.id}`, {
       method: "DELETE",
-      successMessage: selectedPost.post_type === "case" ? "상담 기록을 삭제했습니다." : "카드를 삭제했습니다.",
+      successMessage: "상담 질문을 삭제했습니다.",
     });
     if (result.ok) {
       setSelectedPost(null);

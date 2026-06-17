@@ -24,7 +24,7 @@ export function useConsultations({ request }: UseConsultationsOptions) {
     const page = options.page ?? consultationPageMeta.page;
     const result = await request<PostPage>(`/api/v1/posts/my-consultations?page=${page}&size=9`, {
       quiet: options.quiet,
-      successMessage: "내 상담 기록을 불러왔습니다.",
+      successMessage: "내 질문을 불러왔습니다.",
     });
 
     if (result.ok && Array.isArray(result.data.items)) {

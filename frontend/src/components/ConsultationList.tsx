@@ -24,10 +24,10 @@ function ConsultationCard({ consultation, onSelectConsultation }: ConsultationCa
     >
       <div className="consultation-card-head">
         <div>
-          <p className="eyebrow">Private Request</p>
+          <p className="eyebrow">My Question</p>
           <h3>{consultation.title}</h3>
         </div>
-        <span>비공개</span>
+        <span>공개</span>
       </div>
       <p>{excerpt(consultation.content, 150)}</p>
       <div className="card-tags">
@@ -57,18 +57,18 @@ export function ConsultationList({
   onChangePage: (nextPage: number) => void;
 }) {
   return (
-    <section className="posts-section consultations-section" aria-label="내 상담 기록">
+    <section className="posts-section consultations-section" aria-label="내 질문">
       <div className="section-heading list-heading">
         <div>
-          <p className="eyebrow">My Private Matching Requests</p>
-          <h2>내 상담 기록</h2>
+          <p className="eyebrow">My Questions</p>
+          <h2>내 질문</h2>
         </div>
         <div className="section-actions">
           <span className="count-chip">
             {pageMeta.total}개 · {pageMeta.page}/{pageMeta.total_pages || 1} 페이지
           </span>
           <button className="submit-button compact-button" type="button" onClick={onOpenCompose}>
-            상담 등록
+            질문 작성
           </button>
         </div>
       </div>
@@ -85,10 +85,10 @@ export function ConsultationList({
         </div>
       ) : (
         <div className="empty-state consultation-empty">
-          <strong>저장된 상담 기록이 없습니다.</strong>
-          <span>상담을 등록하면 이후 Agent가 공공데이터를 기반으로 답변을 도와주는 흐름으로 확장합니다.</span>
+          <strong>작성한 질문이 없습니다.</strong>
+          <span>반려견 상태와 궁금한 점을 작성하면 AIHub 기반 답변을 받을 수 있습니다.</span>
           <button className="pill-button highlight" type="button" onClick={onOpenCompose}>
-            상담 등록
+            질문 작성
           </button>
         </div>
       )}
