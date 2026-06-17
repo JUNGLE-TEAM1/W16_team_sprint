@@ -252,7 +252,7 @@ source_external_id = 원본 row id
 ## 8. 바로 다음 구현
 
 1. MCP provider 교체
-   - 현재 Stack Overflow provider는 피봇 전 흔적이다.
+   - 현재 외부 참고자료 provider는 피봇 전 흔적이다.
    - 공공데이터/정책 출처 조회 provider로 바꾼다.
 
 2. 상담 상세의 Agent 답변 생성/저장 흐름

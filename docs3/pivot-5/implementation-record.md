@@ -266,14 +266,8 @@ backend tests: 통과
 
 ## 10. 다음 구현
 
-다음 구현 우선순위는 **MCP provider를 공공데이터/정책 출처 조회로 교체**하는 것입니다.
+다음 구현 우선순위는 **MCP provider를 현재 도메인에 맞는 실제 외부 서비스 연동으로 교체**하는 것입니다.
 
-현재 MCP endpoint와 JSON-RPC tool 구조는 있지만 provider가 아직 피봇 전 Stack Exchange 기반입니다. 다음 단계에서는 아래처럼 바꿔야 합니다.
+이 문서는 생활지원 매칭 보드 피봇 당시의 기록입니다. 이후 서비스 도메인이 반려견 케어 상담 보드로 다시 피봇되면서, 이 단계에서 언급했던 외부 참고자료 흐름은 폐기 대상이 되었습니다.
 
-```text
-search_external_references
--> 상담 제목/내용/태그/지역 입력
--> seed/public support cards 또는 공공데이터 출처 검색
--> 정책/시설 참고자료 카드 반환
--> Sprint 8 Agent가 이 결과를 사용
-```
+새 기준에서는 반려견 상담 질문에 대해 필요한 경우 외부 위치/병원 검색 API를 JSON-RPC MCP tool로 호출하고, Sprint 8 Agent가 그 결과를 답변 보조 정보로 사용합니다.

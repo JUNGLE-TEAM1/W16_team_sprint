@@ -1,199 +1,110 @@
-# AI 생활지원 매칭 보드
+# AI 반려견 케어 상담 보드
 
-공공데이터 기반으로 복지정책, 청년지원, 공공시설, 생활 인프라 정보를 보여주고, 사용자의 개인 상황에 맞는 지원 후보를 AI로 찾아주는 학습용 MVP 레포입니다.
+반려견 건강, 성장, 질병 관련 질문을 공개 게시판에 올리고, AIHub 반려견 말뭉치 기반 RAG로 참고 답변과 행동 계획을 생성하는 학습용 MVP입니다.
 
-이 프로젝트는 기존 `AI 지식 공유 게시판`에서 피봇되었습니다. 현재 기준은 **공개 지원 정보 보드 + 비공개 AI 지원 매칭**입니다.
+이전 `AI 지식 공유 게시판`, `AI 생활지원 매칭 보드` 기록은 학습 이력으로 남아 있지만, 현재 구현 기준은 **AI 반려견 케어 상담 보드**입니다.
 
-## 서비스 컨셉
-
-사용자는 로그인하지 않아도 공개 지원 정보를 볼 수 있습니다. 다만 개인 상황을 입력해서 AI 매칭을 받거나, 매칭 요청 기록을 저장하려면 로그인이 필요합니다.
+## 핵심 흐름
 
 ```text
-지원 정보 탐색
--> 로그인
--> 상담 등록
--> 상담 내용 입력
--> RAG로 공개 지원/시설 카드 검색
--> AI가 관련 지원, 부족 조건, 체크리스트 요약
--> 내 상담 기록에 비공개 저장
+사용자 질문 작성
+-> 공개 상담 질문으로 저장
+-> AIHub 반려견 Q&A/원천 말뭉치 검색
+-> AI 답변 + 행동 계획 + 참고 근거 표시
+-> 댓글로 추가 경험이나 보충 질문 작성
 ```
 
-## 핵심 도메인
+## 도메인 매핑
 
-| 항목 | 의미 |
+| 기존 구조 | 현재 의미 |
 | --- | --- |
-| 지원 카드 | 복지정책, 청년지원, 주거지원, 취업지원 같은 공개 정책 정보 |
-| 시설 카드 | 복지관, 청년센터, 상담센터, 생활 인프라 같은 공개 시설 정보 |
-| 내 상담 요청 | 사용자가 자기 상황을 입력한 비공개 AI 매칭 요청 |
-| AI 답변 | 상담 요청과 공공데이터를 바탕으로 Agent가 생성할 답변 영역 |
-| 태그 | `청년`, `주거`, `취업`, `서울`, `마포구`, `저소득` 같은 매칭 기준 |
-| RAG | 개인 상담 요청을 query로 사용해 공개 지원/시설 카드만 검색 |
-| MCP | 공공데이터나 정책 출처를 JSON-RPC tool 형태로 조회하는 연결 지점 |
-| Agent | RAG/MCP 결과를 조합해 신청 가능성, 부족 조건, 체크리스트를 생성할 후속 기능 |
+| `Post` | 공개 반려견 케어 상담 질문 |
+| `Comment` | 댓글, 추가 경험, 보충 질문 |
+| `Tag` | 기침, 구토, 피부, 안과, 자견, 노령견 같은 케어 메타데이터 |
+| `knowledge_documents` | AIHub 원본 JSON 문서 단위 메타데이터 |
+| `knowledge_chunks` | RAG 검색용 chunk와 embedding |
+| RAG | 사용자 질문과 유사한 AIHub Q&A/말뭉치 검색 |
+| Agent | 참고 답변, 병원 방문 기준, 보호자 행동 체크리스트 생성 |
 
-## 공개/비공개 기준
+AI 답변은 확정 진단이 아니라 참고 정보입니다. 응급 증상, 악화, 지속 증상은 수의사 상담을 권장합니다.
 
-| 데이터 | 공개 목록 | RAG index | 댓글 | 비고 |
-| --- | --- | --- | --- | --- |
-| `policy` | 노출 | 포함 | 없음 | 지원 카드 |
-| `facility` | 노출 | 포함 | 없음 | 시설 카드 |
-| `case` | 미노출 | 제외 | 없음 | 작성자 본인만 보는 내 상담 요청 |
+## 실행
 
-개인 상담 요청에는 민감한 정보가 들어갈 수 있으므로 공개 게시판에 섞지 않고, 공용 vector index에도 저장하지 않습니다. 현재 입력값은 RAG 검색 query로만 사용합니다.
-
-## 현재 구현 상태
-
-완료된 기반:
-
-- Session 기반 회원가입/로그인/로그아웃
-- 게시글 CRUD 기반을 재사용한 지원 카드/시설 카드/상담 요청 모델
-- PostgreSQL + pgvector 기반 RAG 저장 구조
-- LangChain 기반 RAG index 연동
-- OpenAI embedding 및 관련 지원 카드 요약
-- 검색/태그/정렬/페이징
-- 좋아요를 `관심 등록` 의미로 사용
-- JSON-RPC MCP endpoint 기반 외부 참고자료 조회 틀
-- private case 보호 정책
-- `내 상담 기록` 프론트 화면
-- 상담 상세의 `AI 답변` placeholder 섹션
-- `data-bot` 작성자 기반 공공데이터 seed/import script
-
-아직 필요한 MVP 작업:
-
-- Stack Overflow MCP provider를 공공데이터/정책 출처 provider로 교체
-- 상담 상세의 Agent 답변 생성/저장 연결
-- 정부/공공기관 톤 UI polishing
-
-## 기술 스택
-
-| 영역 | 기술 |
-| --- | --- |
-| Frontend | React + Vite |
-| Backend/API | FastAPI |
-| Database | PostgreSQL |
-| ORM | SQLAlchemy |
-| AI/RAG | LangChain + OpenAI Embeddings |
-| Vector DB | PostgreSQL + pgvector |
-| Auth | Session 인증 |
-| MCP | FastAPI 내부 JSON-RPC endpoint |
-
-## 실행 방법
-
-### Backend
+백엔드:
 
 ```bash
-cp .env.example .env
-docker compose up -d db
-python3.11 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/uvicorn backend.app.main:app --reload --env-file .env
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-API 문서:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### Frontend
+프론트엔드:
 
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
-프론트엔드 개발 서버:
+기본 접속:
 
 ```text
 http://127.0.0.1:5173
 ```
 
-## 테스트 방법
+## AIHub 데이터 적재
 
-```bash
-docker compose up -d db
-.venv/bin/python -m pytest backend/tests
-cd frontend
-npm run build
-```
+AIHub 원본 데이터는 용량과 라이선스 때문에 repo에 커밋하지 않습니다. 로컬에 다운로드한 뒤 import script로 DB와 pgvector index에 적재합니다.
 
-테스트도 PostgreSQL을 사용합니다. 로컬 DB schema를 크게 바꾼 뒤 테스트가 꼬이면 학습용 데이터 reset이 필요할 수 있습니다.
-
-## 공공데이터 Seed 적재
-
-기본 seed 파일:
+기본 기대 경로:
 
 ```text
-backend/app/data/public_support_seed.json
+/Users/liamtsy/Downloads/59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터
 ```
 
-검증만 실행:
+OpenAI embedding으로 실제 적재:
 
 ```bash
-.venv/bin/python -m backend.app.scripts.import_public_support_seed --dry-run
+python3 -m backend.app.scripts.import_aihub_pet_care --embedding-provider openai
 ```
 
-DB에 지원/시설 카드만 빠르게 적재:
+빠른 구조 확인용 적재:
 
 ```bash
-.venv/bin/python -m backend.app.scripts.import_public_support_seed --embedding-provider none
+python3 -m backend.app.scripts.import_aihub_pet_care --embedding-provider none --limit 10
 ```
 
-실제 RAG 추천까지 확인하려면 OpenAI API key가 설정된 상태에서 embedding을 함께 생성합니다.
+테스트/로컬 검증용 mock embedding:
 
 ```bash
-.venv/bin/python -m backend.app.scripts.import_public_support_seed --embedding-provider openai
+python3 -m backend.app.scripts.import_aihub_pet_care --embedding-provider mock --limit 10
 ```
 
-옵션:
+## 주요 API
 
-```text
---embedding-provider none   빠른 DB seed. RAG index는 만들지 않음.
---embedding-provider mock   테스트/로컬용 deterministic embedding.
---embedding-provider openai 실제 RAG용 OpenAI embedding.
---limit N                   앞에서 N개만 적재.
---dry-run                   JSON 검증만 하고 DB에는 쓰지 않음.
-```
+| 기능 | Endpoint |
+| --- | --- |
+| 질문 목록 | `GET /api/v1/posts` |
+| 질문 작성 | `POST /api/v1/posts` |
+| 내 질문 | `GET /api/v1/posts/my-consultations` |
+| 댓글 | `GET/POST /api/v1/posts/{post_id}/comments` |
+| AI 답변 조회 | `GET /api/v1/ai/pet-care/posts/{post_id}/advice` |
+| AI 답변 생성/저장 | `POST /api/v1/ai/pet-care/posts/{post_id}/advice` |
 
-## 주요 코드 위치
+## 주요 파일
 
 | 영역 | 파일 |
 | --- | --- |
-| FastAPI app | `backend/app/main.py` |
-| DB 설정 | `backend/app/db/session.py` |
-| dev schema sync | `backend/app/db/schema.py` |
-| 공통 설정 | `backend/app/core/config.py` |
-| 인증 API | `backend/app/api/v1/auth.py` |
-| 지원 정보 API | `backend/app/api/v1/posts.py` |
-| RAG API | `backend/app/api/v1/ai.py` |
-| MCP API | `backend/app/api/v1/mcp.py` |
-| 게시판/상담 정책 | `backend/app/services/post_service.py` |
-| 공공데이터 import service | `backend/app/services/public_support_import_service.py` |
-| 공공데이터 seed CLI | `backend/app/scripts/import_public_support_seed.py` |
-| 공공데이터 seed JSON | `backend/app/data/public_support_seed.json` |
-| LangChain RAG index | `backend/app/services/langchain_rag_index.py` |
-| RAG 요약 | `backend/app/services/rag_summary_service.py` |
-| MCP service | `backend/app/services/mcp_service.py` |
-| 외부 참고자료 provider | `backend/app/services/external_reference_service.py` |
-| React entry | `frontend/src/App.tsx` |
-| 공개 지원 목록 | `frontend/src/components/PostList.tsx` |
-| 지원/상담 상세 | `frontend/src/components/PostDetail.tsx` |
-| 상담 등록 modal | `frontend/src/components/ComposeModal.tsx` |
-| 화면 controller | `frontend/src/hooks/useBoardController.ts` |
+| 게시판 API | `backend/app/api/v1/posts.py` |
+| AI 답변 API | `backend/app/api/v1/ai.py` |
+| AIHub importer | `backend/app/scripts/import_aihub_pet_care.py` |
+| AIHub parser/import service | `backend/app/services/aihub_pet_care_import_service.py` |
+| Knowledge RAG index | `backend/app/services/knowledge_rag_index.py` |
+| Pet-care advice service | `backend/app/services/pet_care_advice_service.py` |
+| 프론트 컨트롤러 | `frontend/src/hooks/useBoardController.ts` |
+| AI 답변 hook | `frontend/src/hooks/usePetCareAdvice.ts` |
+| 질문 상세 UI | `frontend/src/components/PostDetail.tsx` |
 
 ## 문서
 
-- [피봇 1차 구현 기록](docs3/pivot-1/implementation-record.md)
-- [피봇 2차 구현 기록](docs3/pivot-2/implementation-record.md)
-- [피봇 3차 MVP 방향 및 데이터 계획](docs3/pivot-3/mvp-direction-and-data-plan.md)
-- [피봇 4차 내 상담 기록 UI 구현 기록](docs3/pivot-4/implementation-record.md)
-- [피봇 5차 공공데이터 seed/import 구현 기록](docs3/pivot-5/implementation-record.md)
-- [Sprint 6 LangChain RAG 리팩토링 구현 기록](docs2/sprint-6/langchain-rag-refactor-record.md)
-- [Sprint 7 MCP 개념 및 의사결정 가이드](docs2/sprint-7/mcp-concept-and-decision-guide.md)
+- [Pet-care pivot decision record](docs3/pet-care-pivot/decision-record.md)
+- [Pet-care pivot implementation record](docs3/pet-care-pivot/implementation-record.md)
 
-## 다음 구현 순서
-
-1. MCP provider를 공공데이터/정책 출처 조회로 교체합니다.
-2. 상담 상세의 Agent 답변 생성/저장 흐름을 연결합니다.
-3. UI를 밝은 공공서비스 톤으로 polishing합니다.
+과거 스프린트 문서는 `docs2/**`, 과거 생활지원 피봇 문서는 `docs3/pivot-*`에 남아 있습니다.

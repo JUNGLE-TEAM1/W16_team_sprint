@@ -2,70 +2,70 @@
 
 ## Sprint Source Of Truth
 
-This repository has pivoted from the original AI knowledge-board concept to the
-**AI 생활지원 매칭 보드** concept.
+This repository has pivoted from the public life-support matching board to the
+**AI 반려견 케어 상담 보드** concept.
 
 Current product direction:
 
-> A public-data based public support-information board plus a private AI
-> matching flow. Users can browse support/facility cards publicly, then enter
-> their own situation privately to find relevant welfare policies, youth
-> support, public facilities, and living-support infrastructure.
+> A public pet-care consultation board where users post dog health, growth, and
+> disease questions. The AI assistant searches the AIHub dog growth/disease
+> corpus with RAG, then returns reference-based advice, action steps, and source
+> snippets.
 
-`docs2/ai_knowledge_board_sprint_plan.md` remains useful as the historical
-sprint-operation document, but new implementation and documentation decisions
-should prioritize the AI 생활지원 매칭 보드 pivot.
+Before planning, implementing, or documenting new work:
 
-Before planning, implementing, or documenting any sprint task:
-
-1. Read `docs3/pivot-3/mvp-direction-and-data-plan.md` first for current product direction.
-2. Treat the AI 생활지원 매칭 보드 pivot as the current product source of truth.
-3. Use `docs2/ai_knowledge_board_sprint_plan.md` only for historical sprint order and learning context, not as the current product domain.
-4. If a user request conflicts with the pivot direction, explain the conflict and confirm the decision before changing scope.
-5. Keep sprint implementation records aligned with the active pivot terminology and sprint boundaries.
-6. Use `docs3/**` for pivot implementation/decision records unless the user explicitly asks for another location. Keep older `docs2/**` sprint records as historical learning material.
+1. Treat the AI 반려견 케어 상담 보드 pivot as the current source of truth.
+2. Use `docs3/pet-care-pivot/**` for current pivot records.
+3. Keep older `docs2/**` and `docs3/pivot-*` records as historical material only.
+4. If a user request conflicts with the pet-care pivot, explain the conflict and confirm the scope before changing direction.
+5. Do not present AIHub data as public board posts; it is a separate RAG knowledge base.
 
 ## Domain Mapping Rule
 
-When working on this repository after the pivot, interpret existing board
-entities as follows:
+Interpret existing entities under the pet-care pivot as follows:
 
-1. Public `Post` means a support card, public facility card, or AI/admin-curated public information card.
-2. Private `Post` with `post_type=case` means a saved private matching request, not a public board article.
-3. `Comment` is disabled by default for both public cards and private matching requests. Re-enable it only after an explicit product decision.
-4. `Tag` means practical matching metadata such as `청년`, `주거`, `취업`, `서울`, `마포구`, `저소득`, `장애`, or `노인`.
-5. `RAG` means using the user's private situation as a query to search only public support/facility cards. Do not put private consultation text into the shared vector index.
-6. `MCP` means retrieving public-data or policy-source references.
-7. `Agent` means generating application-likelihood notes, missing conditions, checklists, and follow-up questions from private user input plus public data.
+1. `Post` means a public pet-care consultation question.
+2. `Comment` means a public reply, added experience, or follow-up question on a consultation.
+3. `Tag` means practical pet-care metadata such as `기침`, `구토`, `피부`, `안과`, `자견`, `성견`, `노령견`, or `예방접종`.
+4. `RAG` means searching AIHub dog Q&A and source corpus chunks, not searching other user posts.
+5. `Agent` means generating reference-based advice, hospital-visit criteria, owner action checklists, and follow-up questions.
+6. `MCP` means JSON-RPC tools backed by real external pet-care or location providers. The current default is Kakao Local region geocoding and nearby animal-hospital search.
+
+## Safety Rule
+
+Pet-care AI output must be framed as reference information, not a medical
+diagnosis.
+
+1. Do not claim a definitive disease diagnosis.
+2. Always include a fixed safety note that emergency, worsening, or persistent symptoms require veterinary consultation.
+3. Prefer practical next actions: observe, record symptoms, contact a clinic, prepare questions, and bring relevant history.
+4. Show the AIHub source snippets used so the user can inspect the basis of the response.
 
 ## Implementation Direction Rule
 
-Prefer a fast pivot that reuses the existing application structure:
+Prefer a fast pivot that reuses the existing application where it still fits:
 
-1. Reuse the current CRUD, Auth, Comment, Tag, Search, Paging, RAG, and MCP structure as much as possible.
-2. Do not introduce dedicated policy/facility tables first unless the user explicitly asks for that larger redesign.
-3. The default data-model direction is to add minimal fields to `Post`, such as `post_type`, `region`, `source_name`, `source_url`, and `source_external_id`.
-4. Public-data import should use a `data-bot` author plus an import script as the default approach. Imported rows should default to `post_type=policy` or `post_type=facility`, `visibility=public`, `comment_policy=none`, and `rag_scope=public`.
-5. Stack Overflow MCP search is no longer the default product direction after the pivot; replace it with a public-data or policy-source provider when implementing MCP work.
-6. For local public-data seed loading, use `python3 -m backend.app.scripts.import_public_support_seed` as the default path and choose `--embedding-provider none|mock|openai` intentionally.
-7. For bulk public-data loading, avoid creating posts one-by-one through the normal UI flow if that would trigger slow per-row work unnecessarily; prefer import/batch-oriented code with clear embedding behavior.
-8. Private matching requests should default to `post_type=case`, `visibility=private`, `comment_policy=none`, and `rag_scope=excluded`.
+1. Reuse the current CRUD, Auth, Comment, Tag, Search, Paging, Like, and detail-page structure.
+2. Public question posts should use `post_type=case`, `visibility=public`, `comment_policy=public`, and `rag_scope=excluded`.
+3. AIHub data must be stored in dedicated knowledge tables, not in `posts`.
+4. The AIHub import script should read local zip files directly and must be idempotent.
+5. AIHub original data files should not be committed to the repo.
+6. Production embedding uses OpenAI; tests use mock embeddings.
+7. If embedding fails during import, store the chunk with `status=failed` so it can be retried later.
 
 ## UI Direction Rule
 
-The UI should feel like a practical public-service portal rather than a dark
-blog-style developer board:
+The UI should feel like a clean pet-care consultation board:
 
-1. Prefer a bright government/public-institution tone with white or light-gray surfaces and restrained blue/teal accents.
-2. Prefer terms like `지원 정보`, `지원 카드`, `시설 카드`, `상담 등록`, `내 상담 기록`, `AI 답변`, `공공데이터 참고자료`, and `관련 지원/시설` over generic `게시글` wording.
-3. Users may browse support/facility cards without logging in.
-4. Login is still required for saving private matching requests, viewing `내 상담 기록`, likes, and AI assistance flows that call protected APIs.
-5. The primary MVP navigation should distinguish `지원 정보` and `내 상담 기록`; 상담 creation should use a `상담 등록` action rather than a separate duplicate top-level `AI 지원 찾기` menu.
-6. Consultation detail pages should reserve a visible `AI 답변` section. Until Agent persistence exists, show an explicit pending/placeholder state.
+1. Use `AI 반려견 케어 상담 보드` as the service name.
+2. Prefer terms like `상담 질문`, `질문 작성`, `내 질문`, `AI 답변`, `행동 계획`, and `참고 근거`.
+3. Remove life-support terms such as `지원 카드`, `시설 카드`, `지원 정보`, and `공공데이터 참고자료` from current UI.
+4. Users may browse public questions and AI answers without logging in.
+5. Login is required for creating questions, comments, likes, and generating AI advice.
 
 ## Learning Record Rule
 
-This repository uses implementation records as study material. When writing or updating `docs2/**/implementation-record.md` or step-specific implementation records:
+This repository uses implementation records as study material. When writing or updating implementation records:
 
 1. Mermaid diagram step numbers must match the explanation numbers below the diagram exactly.
 2. Do not use Mermaid `autonumber` if the written explanation will group or omit steps.
