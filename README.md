@@ -80,7 +80,7 @@
 
 ## 5. 아키텍처
 
-상세 Mermaid 다이어그램은 [`docs/architecture.md`](docs/architecture.md)에 정리되어 있습니다.
+상세 Mermaid 다이어그램과 아키텍처 기준선은 [`docs/02-architecture.md`](docs/02-architecture.md)에 정리되어 있습니다.
 
 ```text
 React

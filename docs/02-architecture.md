@@ -1,6 +1,7 @@
-# 조선왕조실록 AI 게시판 아키텍처
+# 02. Architecture - 조선왕조실록 AI 게시판
 
-이 문서는 현재 코드 기준으로 데이터 구조, 홈페이지 구조, RAG/Agent 구조, 음성 토론 구조를 한 번에 볼 수 있도록 정리한 아키텍처 문서입니다.
+이 문서는 하네스 기준 canonical 아키텍처 Source of Truth입니다.
+현재 코드 기준으로 데이터 구조, 홈페이지 구조, RAG/Agent 구조, 음성 토론 구조를 한 번에 볼 수 있도록 정리합니다.
 
 ## 1. 전체 시스템 구조
 
@@ -587,3 +588,20 @@ sequenceDiagram
 - 검색은 embedding 기반 pgvector 검색과 keyword 검색을 합치는 hybrid 방식입니다. API 키나 chunk가 없으면 keyword 검색 중심으로 fallback됩니다.
 - 텍스트 토론은 SSE 스트리밍, 음성 토론은 WebRTC + Realtime API로 분리되어 있습니다.
 - 음성 토론은 모든 발화마다 무조건 RAG 검색하지 않고, `realtime_orchestrator`가 현재 근거로 답할지 추가 검색할지 먼저 라우팅합니다.
+
+## 14. Architecture Change Rule
+
+아키텍처 변경이 다음 항목에 영향을 주면 이 문서를 먼저 업데이트합니다.
+
+- 시스템 경계
+- 데이터베이스 테이블 또는 모델 관계
+- RAG, MCP, LLM, Realtime 흐름
+- 배포/런타임 토폴로지
+- 프론트엔드/백엔드 책임 분리
+- 외부 서비스 전제
+
+## 15. Known Architecture Gaps
+
+- CI/CD 토폴로지는 아직 정의되지 않았습니다.
+- 운영 배포 아키텍처는 아직 정의되지 않았습니다.
+- API/schema/protocol 계약은 `docs/03-interface-reference.md`에 baseline만 있으며, API 중심 작업 전에 확장이 필요할 수 있습니다.

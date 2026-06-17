@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#102030" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8ba0b5"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8.8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+<style>
+  text { paint-order: stroke; stroke: transparent; }
+</style>
+
+      <rect x="0" y="0" width="1920" height="1080" fill="#f7f9fb"/>
+<circle cx="1640" cy="-120" r="360" fill="#e5f5f3" opacity="0.55"/>
+<circle cx="250" cy="1060" r="340" fill="#fff3d8" opacity="0.55"/>
+<text x="120" y="92" text-anchor="start" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="52" font-weight="700" fill="#122033"><tspan x="120" dy="0">전체 시스템 구조</tspan></text>
+<text x="122" y="142" text-anchor="start" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="25" font-weight="500" fill="#5c6878"><tspan x="122" dy="0">게시판 UI, 백엔드 API, 원문 DB, AI API, MCP 도구가 연결된 근거 기반 AI 게시판</tspan></text>
+      
+    <g filter="url(#shadow)">
+      <rect x="105" y="390" width="260" height="170" rx="22" fill="#fff3d8" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="105" y="390" width="12" height="170" rx="22" fill="#c98a1a"/>
+      <text x="235" y="462.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="235" dy="0">사용자</tspan></text>
+      <text x="235" y="505.7" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="235" dy="0">질문 작성·검색·토론</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="475" y="315" width="300" height="320" rx="22" fill="#e5f5f3" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="475" y="315" width="12" height="320" rx="22" fill="#0f766e"/>
+      <text x="625" y="446.24" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="625" dy="0">React / Vite</tspan></text>
+      <text x="625" y="489.86" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="625" dy="0">게시판 UI</tspan><tspan x="625" dy="28">상세 화면</tspan><tspan x="625" dy="28">음성 토론</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="895" y="315" width="330" height="320" rx="22" fill="#e8eef5" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="895" y="315" width="12" height="320" rx="22" fill="#17324d"/>
+      <text x="1060" y="446.24" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="1060" dy="0">FastAPI Backend</tspan></text>
+      <text x="1060" y="489.86" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1060" dy="0">Auth / Posts</tspan><tspan x="1060" dy="28">Agent / Search</tspan><tspan x="1060" dy="28">Realtime</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="1345" y="250" width="330" height="170" rx="22" fill="#eaf6ef" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="1345" y="250" width="12" height="170" rx="22" fill="#2f855a"/>
+      <text x="1510" y="322.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="1510" dy="0">PostgreSQL +</tspan><tspan x="1510" dy="40">pgvector</tspan></text>
+      <text x="1510" y="397.32" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1510" dy="0">원문·게시글·벡터 색인</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="1345" y="505" width="330" height="170" rx="22" fill="#e9f0ff" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="1345" y="505" width="12" height="170" rx="22" fill="#2563eb"/>
+      <text x="1510" y="577.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="1510" dy="0">OpenAI APIs</tspan></text>
+      <text x="1510" y="620.7" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1510" dy="0">요약·임베딩·Realtime</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="895" y="735" width="330" height="150" rx="22" fill="#fff3d8" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="895" y="735" width="12" height="150" rx="22" fill="#c98a1a"/>
+      <text x="1060" y="797.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="31" font-weight="700" fill="#122033"><tspan x="1060" dy="0">MCP Article Tool</tspan></text>
+      <text x="1060" y="840.7" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1060" dy="0">article_id로 원문 조회</tspan></text>
+    </g>
+      <line x1="365" y1="475" x2="475" y2="475" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="775" y1="475" x2="895" y2="475" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1225" y1="405" x2="1345" y2="335" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1225" y1="520" x2="1345" y2="590" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1060" y1="635" x2="1060" y2="735" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <path d="M 1225 810 C 1410 810 1460 720 1510 675" fill="none" stroke="#c98a1a" stroke-width="5"  stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+      
+    <rect x="760" y="195" width="400" height="62" rx="31" fill="#ffffff" stroke="#c98a1a" stroke-width="2"/>
+    <text x="960" y="236" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="27" font-weight="700" fill="#122033"><tspan x="960" dy="0">근거 기반 AI 게시판</tspan></text>
+  
+    
+</svg>

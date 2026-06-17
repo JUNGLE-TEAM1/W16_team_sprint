@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#102030" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8ba0b5"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8.8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+<style>
+  text { paint-order: stroke; stroke: transparent; }
+</style>
+
+      <rect x="0" y="0" width="1920" height="1080" fill="#f7f9fb"/>
+<circle cx="1640" cy="-120" r="360" fill="#e5f5f3" opacity="0.55"/>
+<circle cx="250" cy="1060" r="340" fill="#fff3d8" opacity="0.55"/>
+<text x="120" y="92" text-anchor="start" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="52" font-weight="700" fill="#122033"><tspan x="120" dy="0">RAG / Agent 게시글 생성 흐름</tspan></text>
+<text x="122" y="142" text-anchor="start" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="25" font-weight="500" fill="#5c6878"><tspan x="122" dy="0">질문이 원문 근거 기반 AI 답변으로 변환되는 핵심 흐름</tspan></text>
+      
+    <g filter="url(#shadow)">
+      <rect x="85" y="430" width="205" height="145" rx="22" fill="#fff3d8" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="85" y="430" width="12" height="145" rx="22" fill="#c98a1a"/>
+      <text x="187.5" y="489.58" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="187.5" dy="0">질문 작성</tspan></text>
+      <text x="187.5" y="530.14" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="187.5" dy="0">제목 + 역사 질문</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="360" y="390" width="245" height="225" rx="22" fill="#e5f5f3" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="360" y="390" width="12" height="225" rx="22" fill="#0f766e"/>
+      <text x="482.5" y="481.66" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="482.5" dy="0">Query 분석</tspan></text>
+      <text x="482.5" y="522.22" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="482.5" dy="0">filter /</tspan><tspan x="482.5" dy="28">rewrite</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="675" y="390" width="245" height="225" rx="22" fill="#eaf6ef" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="675" y="390" width="12" height="225" rx="22" fill="#2f855a"/>
+      <text x="797.5" y="481.66" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="797.5" dy="0">Hybrid Search</tspan></text>
+      <text x="797.5" y="522.22" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="797.5" dy="0">vector +</tspan><tspan x="797.5" dy="28">keyword</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="990" y="390" width="245" height="225" rx="22" fill="#fff3d8" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="990" y="390" width="12" height="225" rx="22" fill="#c98a1a"/>
+      <text x="1112.5" y="489.58" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="1112.5" dy="0">MCP 원문 조회</tspan></text>
+      <text x="1112.5" y="530.14" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1112.5" dy="0">article_id 기반</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="1305" y="335" width="245" height="150" rx="22" fill="#e9f0ff" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="1305" y="335" width="12" height="150" rx="22" fill="#2563eb"/>
+      <text x="1427.5" y="397.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="1427.5" dy="0">LLM Rerank</tspan></text>
+      <text x="1427.5" y="437.64" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1427.5" dy="0">근거 후보 선별</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="1305" y="540" width="245" height="150" rx="22" fill="#e9f0ff" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="1305" y="540" width="12" height="150" rx="22" fill="#2563eb"/>
+      <text x="1427.5" y="602.08" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="1427.5" dy="0">Draft 생성</tspan></text>
+      <text x="1427.5" y="642.6400000000001" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1427.5" dy="0">요약·해석·태그</tspan></text>
+    </g>
+      
+    <g filter="url(#shadow)">
+      <rect x="1620" y="430" width="205" height="145" rx="22" fill="#e8eef5" stroke="#d9e2ec" stroke-width="2"/>
+      <rect x="1620" y="430" width="12" height="145" rx="22" fill="#17324d"/>
+      <text x="1722.5" y="489.58" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="28" font-weight="700" fill="#122033"><tspan x="1722.5" dy="0">Post 저장</tspan></text>
+      <text x="1722.5" y="530.14" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="22" font-weight="500" fill="#5c6878"><tspan x="1722.5" dy="0">근거·trace 포함</tspan></text>
+    </g>
+      <line x1="290" y1="502" x2="360" y2="502" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="605" y1="502" x2="675" y2="502" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="920" y1="502" x2="990" y2="502" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1235" y1="465" x2="1305" y2="415" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1235" y1="540" x2="1305" y2="615" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1550" y1="415" x2="1620" y2="475" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      <line x1="1550" y1="615" x2="1620" y2="530" stroke="#8ba0b5" stroke-width="5"  stroke-linecap="round" marker-end="url(#arrow)"/>
+      
+    <rect x="420" y="700" width="335" height="58" rx="29" fill="#ffffff" stroke="#2f855a" stroke-width="2"/>
+    <text x="587.5" y="739" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="25" font-weight="700" fill="#122033"><tspan x="587.5" dy="0">검색 후보 확보</tspan></text>
+  
+      
+    <rect x="955" y="700" width="385" height="58" rx="29" fill="#ffffff" stroke="#c98a1a" stroke-width="2"/>
+    <text x="1147.5" y="739" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="25" font-weight="700" fill="#122033"><tspan x="1147.5" dy="0">원문 근거 검증</tspan></text>
+  
+      
+    <rect x="1360" y="745" width="360" height="58" rx="29" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+    <text x="1540" y="784" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="25" font-weight="700" fill="#122033"><tspan x="1540" dy="0">AI 결과와 근거 저장</tspan></text>
+  
+      <path d="M 1715 575 C 1715 805 450 840 205 575" fill="none" stroke="#b8c2cf" stroke-width="4" stroke-dasharray="12 12" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+      <text x="960" y="905" text-anchor="middle" font-family='"Apple SD Gothic Neo", "Noto Sans CJK KR", "Malgun Gothic", "Arial", sans-serif' font-size="30" font-weight="600" fill="#5c6878"><tspan x="960" dy="0">게시글 상세 화면에서 요약, 해석, 추천 태그, 근거 기사를 함께 보여줌</tspan></text>
+    
+</svg>
