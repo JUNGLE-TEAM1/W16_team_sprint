@@ -1,12 +1,29 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { Plus, Trash2, Search, Database } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, Search, Database } from "lucide-react";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 import CreateDatasetModal from "../../components/etl/CreateDatasetModal";
 import TargetImportModal from "../../components/etl/TargetImportModal";
 import { useToast } from "../../components/common/Toast";
 import { API_BASE_URL } from "../../config/api";
 const ITEMS_PER_PAGE = 10;
+
+const getDatasetTypeLabel = (datasetType) =>
+  (datasetType || "source") === "source" ? "소스" : "타겟";
+
+const getStatusLabel = (isActive) => (isActive ? "활성" : "비활성");
+
+const getPatternLabel = (job) => {
+  if (job.job_type === "cdc") {
+    return job.is_active ? "CDC 활성" : "CDC 중지";
+  }
+
+  if (job.job_type === "streaming") {
+    return "스트리밍";
+  }
+
+  return (job.dataset_type || "source") === "source" ? "배치 소스" : "배치 타겟";
+};
 
 export default function ETLMain() {
   const [jobs, setJobs] = useState([]);
@@ -20,6 +37,8 @@ export default function ETLMain() {
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [streamingAlert, setStreamingAlert] = useState(null);
+  const [pendingStreamingJobId, setPendingStreamingJobId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,6 +62,14 @@ export default function ETLMain() {
   useEffect(() => {
     fetchJobs();
   }, [location.key]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingStreamingJobId) {
+        clearTimeout(pendingStreamingJobId);
+      }
+    };
+  }, [pendingStreamingJobId]);
 
   // Check for openImport query parameter
   useEffect(() => {
@@ -139,8 +166,71 @@ export default function ETLMain() {
     navigate("/etl/visual", { state: { datasetType } });
   };
 
+  const handleStreamingBadgeClick = (event, job) => {
+    event.stopPropagation();
+
+    if (pendingStreamingJobId) {
+      clearTimeout(pendingStreamingJobId);
+    }
+
+    setStreamingAlert(null);
+
+    const timerId = setTimeout(() => {
+      setStreamingAlert({
+        datasetName: job.name,
+        title: "실시간 가격 오입력 의심",
+        risk: "고위험",
+        message:
+          "PB-48291 상품에서 기준 가격 대비 -90% 가격 급락과 구매량 8.4배 증가가 감지되었습니다.",
+      });
+      setPendingStreamingJobId(null);
+    }, 1000);
+
+    setPendingStreamingJobId(timerId);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-6 pt-2 pb-6">
+      {streamingAlert && (
+        <div className="fixed right-6 top-20 z-[1100] w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-red-200 bg-white p-4 shadow-2xl shadow-red-100">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-red-100 p-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-bold text-slate-950">
+                  {streamingAlert.title}
+                </p>
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700">
+                  {streamingAlert.risk}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {streamingAlert.datasetName} 스트리밍 감지
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                {streamingAlert.message}
+              </p>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setStreamingAlert(null)}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100"
+                >
+                  닫기
+                </button>
+                <button
+                  onClick={() => navigate("/demo/realtime-alerts")}
+                  className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  알림 보기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with Create Button */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dataset</h1>
@@ -249,9 +339,7 @@ export default function ETLMain() {
                             : "bg-orange-100 text-orange-800"
                         }`}
                       >
-                        {(job.dataset_type || "source") === "source"
-                          ? "Source"
-                          : "Target"}
+                        {getDatasetTypeLabel(job.dataset_type)}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-sm">
@@ -262,7 +350,7 @@ export default function ETLMain() {
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {job.is_active ? "Active" : "Inactive"}
+                        {getStatusLabel(job.is_active)}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-sm">
@@ -274,15 +362,19 @@ export default function ETLMain() {
                               : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {job.is_active ? "CDC Active" : "CDC Stopped"}
+                          {getPatternLabel(job)}
                         </span>
                       ) : job.job_type === "streaming" ? (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                          Streaming
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(event) => handleStreamingBadgeClick(event, job)}
+                          className="cursor-default rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-800 focus:outline-none"
+                        >
+                          {getPatternLabel(job)}
+                        </button>
                       ) : (
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          Batch
+                          {getPatternLabel(job)}
                         </span>
                       )}
                     </td>
