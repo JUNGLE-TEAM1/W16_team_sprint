@@ -1,0 +1,45 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: xflow-cluster
+  region: ap-northeast-2
+
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+    volumeSize: 20
+    ssh:
+      allow: false
+    iam:
+      withAddonPolicies:
+        ebs: true
+
+  - name: spark-spot
+    instancesDistribution:
+      instanceTypes:
+        - m5.2xlarge
+        - m5a.2xlarge
+        - m5d.2xlarge
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 5
+    volumeSize: 50
+    ssh:
+      allow: false
+    labels:
+      node-type: spark
+      lifecycle: spot
+    taints:
+      - key: spark-only
+        value: "true"
+        effect: NoSchedule
+    iam:
+      withAddonPolicies:
+        ebs: true

@@ -1,0 +1,110 @@
+import { API_BASE_URL } from '../../config/api';
+
+const API_URL = `${API_BASE_URL}/api/catalog`;
+
+export const catalogAPI = {
+    /**
+     * Fetch all datasets
+     * @param {string} sessionId - Optional session ID for permission filtering
+     * @returns {Promise<Array>}
+     */
+    getDatasets: async (sessionId = null) => {
+        const url = sessionId ? `${API_URL}?session_id=${sessionId}` : API_URL;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch catalog data: ${response.statusText} `);
+        }
+        return await response.json();
+    },
+
+    /**
+     * Create a new dataset
+     * @param {Object} data 
+     * @returns {Promise<Object>}
+     */
+    createDataset: async (data) => {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to create dataset");
+        }
+        return await response.json();
+    },
+
+    /**
+     * Fetch a single dataset by its ID
+     * @param {string} id 
+     * @returns {Promise<Object>}
+     */
+    getDataset: async (id) => {
+        const response = await fetch(`${API_URL}/${id}`);
+        if (!response.ok) {
+            throw new Error(`Failed to load dataset details: ${response.statusText}`);
+        }
+        return await response.json();
+    },
+
+    /**
+     * Delete a dataset by its ID
+     * @param {string} id 
+     * @returns {Promise<boolean>}
+     */
+    deleteDataset: async (id) => {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to delete dataset: ${response.statusText}`);
+        }
+        return true;
+    },
+
+    /**
+     * Fetch lineage data for a dataset
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    getLineage: async (id) => {
+        const response = await fetch(`${API_URL}/${id}/lineage`);
+        if (!response.ok) {
+            throw new Error(`Failed to load lineage: ${response.statusText}`);
+        }
+        return await response.json();
+    },
+
+    /**
+     * Save lineage layout (node positions) for a dataset
+     * @param {string} id - Dataset ID
+     * @param {Object} layout - Layout data with node positions
+     * @returns {Promise<Object>}
+     */
+    saveLayout: async (id, layout) => {
+        const response = await fetch(`${API_URL}/${id}/layout`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(layout)
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to save layout: ${response.statusText}`);
+        }
+        return await response.json();
+    },
+
+    /**
+     * Get saved lineage layout for a dataset
+     * @param {string} id - Dataset ID
+     * @returns {Promise<Object>}
+     */
+    getLayout: async (id) => {
+        const response = await fetch(`${API_URL}/${id}/layout`);
+        if (!response.ok) {
+            throw new Error(`Failed to load layout: ${response.statusText}`);
+        }
+        return await response.json();
+    },
+};
+

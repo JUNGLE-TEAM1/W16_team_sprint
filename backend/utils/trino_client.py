@@ -1,0 +1,245 @@
+import os
+from trino.dbapi import connect
+from trino.auth import BasicAuthentication
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Trino 설정
+TRINO_HOST = os.getenv("TRINO_HOST", "trino.trino.svc.cluster.local")
+TRINO_PORT = int(os.getenv("TRINO_PORT", "8080"))
+TRINO_USER = os.getenv("TRINO_USER", "admin")
+TRINO_CATALOG = os.getenv("TRINO_CATALOG", "lakehouse")
+TRINO_SCHEMA = os.getenv("TRINO_SCHEMA", "default")
+
+
+def get_trino_connection(catalog: str = None, schema: str = None):
+    """Trino 연결 생성"""
+    conn = connect(
+        host=TRINO_HOST,
+        port=TRINO_PORT,
+        user=TRINO_USER,
+        catalog=catalog or TRINO_CATALOG,
+        schema=schema or TRINO_SCHEMA,
+    )
+    return conn
+
+
+def execute_query(sql: str, catalog: str = None, schema: str = None, limit: int = None) -> list[dict]:
+    """
+    SQL 쿼리 실행 후 결과 반환
+
+    Args:
+        sql: SQL 쿼리
+        catalog: Trino 카탈로그
+        schema: Trino 스키마
+        limit: 최대 반환 행 수 (None이면 모두 반환, 큰 데이터는 위험!)
+    """
+    conn = get_trino_connection(catalog, schema)
+    cursor = conn.cursor()
+    cursor.execute(sql)
+
+    columns = [desc[0] for desc in cursor.description]
+
+    # limit 지정 시 fetchmany 사용
+    if limit:
+        rows = cursor.fetchmany(limit)
+    else:
+        rows = cursor.fetchall()
+
+    # Convert rows to list of dicts
+    data = []
+    for row in rows:
+        row_dict = {}
+        for col, val in zip(columns, row):
+            row_dict[col] = val
+        data.append(row_dict)
+
+    cursor.close()
+    conn.close()
+    return data
+
+
+def execute_query_paginated(sql: str, catalog: str = None, schema: str = None, page: int = 1, page_size: int = 1000):
+    """
+    페이지네이션된 쿼리 실행
+
+    Args:
+        sql: SQL 쿼리
+        catalog: Trino 카탈로그
+        schema: Trino 스키마
+        page: 페이지 번호 (1부터 시작)
+        page_size: 페이지당 행 수
+
+    Returns:
+        dict: {data, page, page_size, has_more}
+    """
+    conn = get_trino_connection(catalog, schema)
+    cursor = conn.cursor()
+
+    # OFFSET/LIMIT 추가 (이미 있으면 무시)
+    if "LIMIT" not in sql.upper():
+        offset = (page - 1) * page_size
+        paginated_sql = f"{sql.rstrip(';')} OFFSET {offset} LIMIT {page_size + 1}"
+    else:
+        paginated_sql = sql
+
+    cursor.execute(paginated_sql)
+    columns = [desc[0] for desc in cursor.description]
+    rows = cursor.fetchall()
+
+    # page_size + 1개를 가져와서 다음 페이지 존재 여부 확인
+    has_more = len(rows) > page_size
+    if has_more:
+        rows = rows[:page_size]
+
+    # Convert to dict
+    data = []
+    for row in rows:
+        row_dict = {}
+        for col, val in zip(columns, row):
+            row_dict[col] = val
+        data.append(row_dict)
+
+    cursor.close()
+    conn.close()
+
+    return {
+        "data": data,
+        "page": page,
+        "page_size": page_size,
+        "row_count": len(data),
+        "has_more": has_more
+    }
+
+
+def get_catalogs() -> list[str]:
+    """사용 가능한 카탈로그 목록 조회"""
+    conn = get_trino_connection()
+    cursor = conn.cursor()
+    cursor.execute("SHOW CATALOGS")
+    catalogs = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return catalogs
+
+
+def get_schemas(catalog: str) -> list[str]:
+    """카탈로그의 스키마 목록 조회"""
+    conn = get_trino_connection(catalog=catalog)
+    cursor = conn.cursor()
+    cursor.execute(f"SHOW SCHEMAS IN {catalog}")
+    schemas = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return schemas
+
+
+def get_tables(catalog: str, schema: str) -> list[str]:
+    """스키마의 테이블 목록 조회"""
+    conn = get_trino_connection(catalog=catalog, schema=schema)
+    cursor = conn.cursor()
+    cursor.execute(f"SHOW TABLES IN {catalog}.{schema}")
+    tables = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return tables
+
+
+def get_table_schema(catalog: str, schema: str, table: str) -> list[dict]:
+    """테이블 스키마 조회"""
+    conn = get_trino_connection(catalog=catalog, schema=schema)
+    cursor = conn.cursor()
+    cursor.execute(f"DESCRIBE {catalog}.{schema}.{table}")
+    columns = []
+    for row in cursor.fetchall():
+        columns.append({
+            "column_name": row[0],
+            "data_type": row[1],
+            "extra": row[2] if len(row) > 2 else None,
+            "comment": row[3] if len(row) > 3 else None,
+        })
+    cursor.close()
+    conn.close()
+    return columns
+
+
+def preview_table(catalog: str, schema: str, table: str, limit: int = 100) -> list[dict]:
+    """테이블 데이터 미리보기"""
+    sql = f"SELECT * FROM {catalog}.{schema}.{table} LIMIT {limit}"
+    return execute_query(sql, catalog=catalog, schema=schema)
+
+
+def register_delta_table(table_name: str, s3_location: str, catalog: str = None, schema: str = None) -> bool:
+    """
+    Delta Lake 테이블을 Trino에 등록
+    
+    Args:
+        table_name: 등록할 테이블 이름
+        s3_location: S3 경로 (s3://bucket/path 또는 s3a://bucket/path)
+        catalog: Trino 카탈로그 (기본: lakehouse)
+        schema: Trino 스키마 (기본: default)
+    
+    Returns:
+        bool: 등록 성공 여부
+    """
+    catalog = catalog or TRINO_CATALOG
+    schema = schema or TRINO_SCHEMA
+    
+    # s3a:// -> s3:// 변환 (Trino는 s3:// 사용)
+    if s3_location.startswith("s3a://"):
+        s3_location = s3_location.replace("s3a://", "s3://", 1)
+    
+    # 경로 정규화
+    s3_location = s3_location.rstrip("/")
+    
+    try:
+        conn = get_trino_connection(catalog=catalog, schema=schema)
+        cursor = conn.cursor()
+        
+        # 1. 기존 테이블 등록 해제 (있으면)
+        try:
+            unregister_sql = f"""
+                CALL {catalog}.system.unregister_table(
+                    schema_name => '{schema}',
+                    table_name => '{table_name}'
+                )
+            """
+            logger.info(f"[Trino] Unregistering existing table: {catalog}.{schema}.{table_name}")
+            cursor.execute(unregister_sql)
+            cursor.fetchall()
+            logger.info(f"[Trino] Unregistered existing table")
+        except Exception as e:
+            logger.debug(f"[Trino] Unregister (ignore if not exists): {e}")
+        
+        # 2. 새 테이블 등록
+        register_sql = f"""
+            CALL {catalog}.system.register_table(
+                schema_name => '{schema}',
+                table_name => '{table_name}',
+                table_location => '{s3_location}'
+            )
+        """
+        logger.info(f"[Trino] Registering table: {catalog}.{schema}.{table_name}")
+        logger.info(f"[Trino] Location: {s3_location}")
+        cursor.execute(register_sql)
+        cursor.fetchall()
+        
+        # 3. 등록 확인
+        verify_sql = f"SHOW TABLES IN {catalog}.{schema} LIKE '{table_name}'"
+        cursor.execute(verify_sql)
+        tables = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        if tables:
+            logger.info(f"[Trino] ✅ Table registered successfully: {catalog}.{schema}.{table_name}")
+            return True
+        else:
+            logger.warning(f"[Trino] ⚠️ Table registration may have failed - table not found")
+            return False
+            
+    except Exception as e:
+        logger.error(f"[Trino] ❌ Error registering table: {e}")
+        return False

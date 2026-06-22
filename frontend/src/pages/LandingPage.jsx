@@ -1,0 +1,531 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import {
+    Database,
+    Workflow,
+    FolderSearch,
+    GitMerge,
+    BarChart3,
+    ArrowRight,
+    Zap,
+    Globe,
+    Share2,
+    Search,
+    ChevronLeft,
+    ChevronRight
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import logo from "../assets/logo.png";
+
+import visual1 from "../assets/visual/visual1.png";
+import kc from "../assets/person/kc.png";
+import mh from "../assets/person/mh.jpg";
+import sc from "../assets/person/sc.png";
+import jy from "../assets/person/jy.png";
+import sk from "../assets/person/sk.jpg";
+
+function LandingPage() {
+    const navigate = useNavigate();
+    const { sessionId, user } = useAuth();
+    const [activeStickySection, setActiveStickySection] = useState(0);
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (sessionId && user) {
+            // If user has ETL access or is admin, go to dataset page
+            // Otherwise go to catalog page
+            if (user.is_admin || user.etl_access) {
+                navigate("/dataset");
+            } else {
+                navigate("/catalog");
+            }
+        }
+    }, [sessionId, user, navigate]);
+
+    // Scroll spy for sticky sections
+    useEffect(() => {
+        const handleScroll = () => {
+            const sections = document.querySelectorAll('.sticky-section-trigger');
+            sections.forEach((section, index) => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+                    setActiveStickySection(index);
+                }
+            });
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    return (
+        <div className="min-h-screen bg-white text-[#202124] font-sans selection:bg-blue-100 selection:text-blue-900">
+
+            {/* Navigation (Minimalist) */}
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md transition-all duration-300">
+                <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+                    <div className="flex items-center">
+                        <img src={logo} alt="AskLake" className="h-9 sm:h-11 w-auto object-contain" />
+                    </div>
+                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#5F6368]">
+                        <a href="#solutions" className="hover:text-[#202124] transition-colors">Solutions</a>
+                        <a href="#team" className="hover:text-[#202124] transition-colors">Team</a>
+                    </div>
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="bg-[#202124] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors"
+                    >
+                        Start XFlow
+                    </button>
+                </div>
+            </nav>
+
+            {/* Hero Section */}
+            <section className="relative pt-20 sm:pt-32 pb-12 sm:pb-24 px-4 sm:px-6 flex flex-col items-center justify-center text-center overflow-hidden">
+                {/* Subtle Background Particles */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <div className="absolute top-20 left-[10%] sm:left-[20%] w-48 sm:w-72 h-48 sm:h-72 bg-blue-100/50 rounded-full blur-3xl mix-blend-multiply animate-pulse" />
+                    <div className="absolute bottom-20 right-[10%] sm:right-[20%] w-64 sm:w-96 h-64 sm:h-96 bg-purple-100/50 rounded-full blur-3xl mix-blend-multiply animate-pulse delay-1000" />
+                </div>
+
+                <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-80px)] sm:min-h-[calc(100vh-100px)]">
+                    <style>{`
+                        @keyframes shimmer-rain {
+                            0% { transform: translateY(-50px); opacity: 0; }
+                            10% { opacity: 1; }
+                            90% { opacity: 1; }
+                            100% { transform: translateY(600px); opacity: 0; }
+                        }
+                        @keyframes twinkle {
+                            0% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+                            50% { 
+                                opacity: 1; 
+                                transform: scale(1.1); 
+                                /* Deep solid center feeling usually comes from high contrast. 
+                                   We simulate "darker center" relative to bright bloom by making the shadow intense but the inner bg slightly off-white or just pure white with massive bloom. 
+                                   User asked for "center shade deep, outer white low brightness". 
+                                   Let's try a radial gradient or intense shadow. */
+                                box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.8); /* Wider glow radius (30px) and spread (10px) */
+                                background: #ffffff;
+                            }
+                            100% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+                        }
+                        .star-rain-bg {
+                            background: radial-gradient(circle, white 10%, transparent 10%);
+                            background-size: 10px 10px; 
+                            position: absolute;
+                            top: 0; left: 0; right: 0; bottom: 0;
+                            opacity: 0.5;
+                        }
+                        .floating-star {
+                            position: absolute;
+                            background: white;
+                            border-radius: 50%;
+                        }
+                    `}</style>
+                    <br className="hidden sm:block" /><br className="hidden sm:block" /><br />
+                    <div className="relative mb-4 group w-full flex justify-center">
+                        <img
+                            src={logo}
+                            alt="AskLake"
+                            className="h-24 sm:h-36 md:h-48 w-auto object-contain"
+                        />
+                    </div>
+                    <br className="hidden sm:block" />
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-[500] tracking-tight leading-[1.1] mb-4 sm:mb-6 text-[#202124] px-2">
+                        Experience detailed<br />
+                        <span className="text-[#5F6368]">data orchestration.</span>
+                    </h1>
+                    <br className="hidden sm:block" />
+                    <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-[#5F6368] mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed font-light px-4">
+                        From collection to catalog, all in one service.<br className="hidden sm:block" />
+                        <span className="sm:hidden"> </span>The complete solution for your data journey.
+                    </p>
+                    <br className="hidden sm:block" />
+                    <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 w-full px-4">
+                        <button
+                            onClick={() => navigate("/login")}
+                            className="bg-[#202124] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-gray-800 transition-all hover:scale-105 w-full sm:w-auto"
+                        >
+                            Get Started
+                        </button>
+                        <button
+                            onClick={() => document.getElementById('hero-video').scrollIntoView({ behavior: 'smooth' })}
+                            className="bg-[#F1F3F4] text-[#202124] px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-gray-200 transition-all hover:scale-105 w-full sm:w-auto"
+                        >
+                            Watch Video
+                        </button>
+                    </div>
+                </div>
+                <br className="hidden sm:block" /><br className="hidden sm:block" /><br /><br className="hidden sm:block" /><br className="hidden sm:block" />
+                {/* Hero Visual Placeholder */}
+                <div id="hero-video" className="mt-0 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-20">
+                    <div className="aspect-[16/9] bg-[#F8F9FA] rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-2xl flex items-center justify-center relative overflow-hidden group">
+                        <iframe
+                            className="w-full h-full object-cover"
+                            src="https://www.youtube.com/embed/WNXGnw_Wg8Q?autoplay=1&mute=1&loop=1&playlist=WNXGnw_Wg8Q&rel=0"
+                            title="XFlow Landing Video"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* Solutions Section (Sticky Visual, Scrolling Text) */}
+            <section id="solutions" className="relative">
+                <div className="max-w-[1440px] mx-auto flex flex-col lg:flex-row items-start"> {/* Added items-start to fix sticky */}
+
+                    {/* Left: Scrolling Text Content */}
+                    <div className="w-full lg:w-1/2 relative z-10 p-4 sm:p-6 lg:p-0">
+                        {/* Step 1: Challenge */}
+                        <div className="sticky-section-trigger min-h-[60vh] sm:min-h-[80vh] flex flex-col justify-center lg:pl-12 lg:pr-6" data-index="0">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs sm:text-sm font-medium mb-4 sm:mb-6 w-fit">
+                                <Zap size={14} className="sm:w-4 sm:h-4" /> The Challenge
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium mb-4 sm:mb-6 leading-tight">
+                                Scattered data,<br />
+                                <span className="text-[#5F6368]">scattered focus.</span>
+                            </h2>
+                            <p className="text-base sm:text-lg md:text-xl text-[#5F6368] leading-relaxed max-w-md">
+                                Companies want AI, but data is fragmented across DBs, APIs, and logs.
+                                Integrating these silos is the first major hurdle.
+                            </p>
+
+                            {/* Mobile Visual 1 */}
+                            <div className="lg:hidden mt-8 w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-xl bg-[#F1F3F4] border border-gray-100">
+                                <img src={visual1} alt="Problem Visualization" className="w-full h-full object-cover" />
+                            </div>
+                        </div>
+
+                        {/* Step 2: Data Lake */}
+                        <div className="sticky-section-trigger min-h-[60vh] sm:min-h-[80vh] flex flex-col justify-center lg:pl-12 lg:pr-6" data-index="1">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium mb-4 sm:mb-6 w-fit">
+                                <Database size={14} className="sm:w-4 sm:h-4" /> Data Lake house
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium mb-4 sm:mb-6 leading-tight">
+                                Unified storage,<br />
+                                <span className="text-[#5F6368]">limitless scale.</span>
+                            </h2>
+                            <p className="text-base sm:text-lg md:text-xl text-[#5F6368] leading-relaxed max-w-md">
+                                XFlow gathers scattered big data into a single storage.
+                                Experience flexibility and infinite scalability.
+                            </p>
+
+                            {/* Mobile Visual 2 */}
+                            <div className="lg:hidden mt-8 w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-xl bg-[#E8F0FE] border border-gray-100">
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/uD2o2EIMEHo?autoplay=1&mute=1&loop=1&playlist=uD2o2EIMEHo&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Data Lake Architecture Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </div>
+
+                        {/* Step 3: Catalog */}
+                        <div className="sticky-section-trigger min-h-[60vh] sm:min-h-[80vh] flex flex-col justify-center lg:pl-12 lg:pr-6" data-index="2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-xs sm:text-sm font-medium mb-4 sm:mb-6 w-fit">
+                                <Search size={14} className="sm:w-4 sm:h-4" /> Catalog
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium mb-4 sm:mb-6 leading-tight">
+                                Find what matters,<br />
+                                <span className="text-[#5F6368]">instantly.</span>
+                            </h2>
+                            <p className="text-base sm:text-lg md:text-xl text-[#5F6368] leading-relaxed max-w-md">
+                                Collecting isn't enough. Our catalog automates classification and access control,
+                                making discovery effortless.
+                            </p>
+
+                            {/* Mobile Visual 3 */}
+                            <div className="lg:hidden mt-8 w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-xl bg-[#F3E8FD] border border-gray-100">
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/KSE0o1voSAI?autoplay=1&mute=1&loop=1&playlist=KSE0o1voSAI&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Catalog Interface Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </div>
+
+                        {/* Step 4: Query */}
+                        <div className="sticky-section-trigger min-h-[60vh] sm:min-h-[80vh] flex flex-col justify-center lg:pl-12 lg:pr-6" data-index="3">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-green-600 text-xs sm:text-sm font-medium mb-4 sm:mb-6 w-fit">
+                                <Search size={14} className="sm:w-4 sm:h-4" /> Query
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium mb-4 sm:mb-6 leading-tight">
+                                Query your data,<br />
+                                <span className="text-[#5F6368]">instantly.</span>
+                            </h2>
+                            <p className="text-base sm:text-lg md:text-xl text-[#5F6368] leading-relaxed max-w-md">
+                                Query your data with ease. Our AI-powered query engine helps you find answers fast.
+                            </p>
+
+                            {/* Mobile Visual 4 */}
+                            <div className="lg:hidden mt-8 w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-xl bg-[#E6F4EA] border border-gray-100">
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/9-5MRr5aw4E?autoplay=1&mute=1&loop=1&playlist=9-5MRr5aw4E&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Query Interface Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Sticky Visual Content - Desktop only */}
+                    <div className="hidden lg:flex w-1/2 sticky top-0 h-screen items-center justify-center p-6 lg:p-12">
+                        <div className="relative w-full aspect-square md:aspect-[4/3] rounded-[24px] overflow-hidden shadow-2xl bg-white border border-gray-100">
+
+                            {/* Visual 1 */}
+                            <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-[#F1F3F4] flex items-center justify-center overflow-hidden ${activeStickySection === 0 ? 'opacity-100' : 'opacity-0'}`}>
+                                <img src={visual1} alt="Problem Visualization" className="w-full h-full object-cover" />
+                            </div>
+
+                            {/* Visual 2 */}
+                            <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-[#E8F0FE] flex items-center justify-center ${activeStickySection === 1 ? 'opacity-100' : 'opacity-0'}`}>
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/uD2o2EIMEHo?autoplay=1&mute=1&loop=1&playlist=uD2o2EIMEHo&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Data Lake Architecture Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+
+                            {/* Visual 3 */}
+                            <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-[#F3E8FD] flex items-center justify-center ${activeStickySection === 2 ? 'opacity-100' : 'opacity-0'}`}>
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/KSE0o1voSAI?autoplay=1&mute=1&loop=1&playlist=KSE0o1voSAI&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Catalog Interface Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                            {/* Visual 4 */}
+                            <div className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-[#E6F4EA] flex items-center justify-center ${activeStickySection === 3 ? 'opacity-100' : 'opacity-0'}`}>
+                                <iframe
+                                    className="w-full h-full object-cover scale-[1.55] pointer-events-none"
+                                    src="https://www.youtube.com/embed/9-5MRr5aw4E?autoplay=1&mute=1&loop=1&playlist=9-5MRr5aw4E&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1"
+                                    title="Query Interface Video"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+
+            {/* Persona Carousel Section */}
+            <section id="team" className="py-12 sm:py-20 md:py-32 px-4 sm:px-6 max-w-[1440px] mx-auto overflow-hidden">
+                <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row items-start sm:items-end justify-between px-2 gap-4">
+                    <div>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-2 sm:mb-4">Meet the Team</h2>
+                        <p className="text-[#5F6368] text-sm sm:text-base md:text-lg max-w-xl">
+                            XFlow is built by a team who are passionate about making data accessible and easy to use.
+                        </p>
+                    </div>
+                    {/* Navigation Buttons */}
+                    <div className="hidden md:flex gap-4">
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById('persona-scroll');
+                                const cardWidth = el.querySelector('a').offsetWidth;
+                                const gap = 24; // gap-6 = 24px
+                                const scrollAmount = (cardWidth + gap) * 2; // 2 cards
+                                el.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                            }}
+                            className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById('persona-scroll');
+                                const cardWidth = el.querySelector('a').offsetWidth;
+                                const gap = 24; // gap-6 = 24px
+                                const scrollAmount = (cardWidth + gap) * 2; // 2 cards
+                                el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                            }}
+                            className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                        >
+                            <ChevronRight size={24} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Horizontal Scroll Container */}
+                <div
+                    id="persona-scroll"
+                    className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-12 hide-scrollbar"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                    {/* Card 1: PM & Fullstack Developer*/}
+                    <a
+                        href="https://www.linkedin.com/in/kyungcheol-koh/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[85vw] sm:min-w-[400px] md:min-w-[500px] snap-center block cursor-pointer"
+                    >
+                        <div className="aspect-[16/10] bg-[#F1F3F4] rounded-2xl sm:rounded-[32px] relative overflow-hidden group mb-4 sm:mb-6">
+                            <img
+                                src={kc}
+                                alt="PM & Fullstack Developer"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium text-white drop-shadow-lg text-center px-2 sm:px-1">PM & Fullstack Developer</h3>
+                            </div>
+                            <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 bg-white/30 backdrop-blur rounded-full flex items-center justify-center text-white">
+                                <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                            </div>
+                        </div>
+                        <h4 className="text-lg sm:text-xl font-medium mb-2">Ko Gyung Chul</h4>
+                    </a>
+
+                    {/* Card 2:Fullstack Developer */}
+                    <a
+                        href="https://www.linkedin.com/in/민호-김-9a9280396/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[85vw] md:min-w-[500px] snap-center block cursor-pointer"
+                    >
+                        <div className="aspect-[16/10] bg-[#E8F0FE] rounded-[32px] relative overflow-hidden group mb-6">
+                            <img
+                                src={mh}
+                                alt="Fullstack Developer"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h3 className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg text-center px-1">Fullstack Developer</h3>
+                            </div>
+                            <div className="absolute bottom-6 right-6 w-10 h-10 bg-white/30 backdrop-blur rounded-full flex items-center justify-center text-white">
+                                <ArrowRight size={16} />
+                            </div>
+                        </div>
+                        <h4 className="text-xl font-medium mb-2">Kim Min Ho</h4>
+                    </a>
+
+                    {/* Card 3: Fullstack Developer */}
+                    <a
+                        href="https://www.linkedin.com/in/상천-이-a04621397/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[85vw] md:min-w-[500px] snap-center block cursor-pointer"
+                    >
+                        <div className="aspect-[16/10] bg-[#F3E8FD] rounded-[32px] relative overflow-hidden group mb-6">
+                            <img
+                                src={sc}
+                                alt="Fullstack Developer"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h3 className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg text-center px-1">Fullstack Developer</h3>
+                            </div>
+                            <div className="absolute bottom-6 right-6 w-10 h-10 bg-white/30 backdrop-blur rounded-full flex items-center justify-center text-white">
+                                <ArrowRight size={16} />
+                            </div>
+                        </div>
+                        <h4 className="text-xl font-medium mb-2">Lee Sang Chan</h4>
+                    </a>
+                    {/* Card 4: Fullstack Developer */}
+                    <a
+                        href="https://www.linkedin.com/in/junyeop-song-b7b6b2283/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[85vw] md:min-w-[500px] snap-center block cursor-pointer"
+                    >
+                        <div className="aspect-[16/10] bg-[#E6F4EA] rounded-[32px] relative overflow-hidden group mb-6">
+                            <img
+                                src={jy}
+                                alt="Fullstack Developer"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h3 className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg">Fullstack Developer</h3>
+                            </div>
+                            <div className="absolute bottom-6 right-6 w-10 h-10 bg-white/30 backdrop-blur rounded-full flex items-center justify-center text-white">
+                                <ArrowRight size={16} />
+                            </div>
+                        </div>
+                        <h4 className="text-xl font-medium mb-2">Song Jun Yeop</h4>
+                    </a>
+                    {/* Card 5:Fullstack Developer */}
+                    <a
+                        href="https://www.linkedin.com/in/sunkyu-hong-3b23b1381/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-[85vw] md:min-w-[500px] snap-center block cursor-pointer"
+                    >
+                        <div className="aspect-[16/10] bg-[#FEF7E0] rounded-[32px] relative overflow-hidden group mb-6">
+                            <img
+                                src={sk}
+                                alt="Fullstack Developer"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h3 className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg text-center px-1">Fullstack Developer</h3>
+                            </div>
+                            <div className="absolute bottom-6 right-6 w-10 h-10 bg-white/30 backdrop-blur rounded-full flex items-center justify-center text-white">
+                                <ArrowRight size={16} />
+                            </div>
+                        </div>
+                        <h4 className="text-xl font-medium mb-2">Hong Soon Kyu</h4>
+                    </a>
+                </div>
+            </section>
+
+            {/* CTA Footer Section */}
+            <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 text-center">
+                {/* <h2 className="text-6xl md:text-8xl font-bold mb-12 tracking-tight">
+                    XFlow
+                </h2> */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="bg-[#202124] text-white px-8 sm:px-10 py-4 sm:py-5 rounded-full text-lg sm:text-xl font-medium hover:bg-gray-800 transition-all hover:scale-105 w-full sm:w-auto max-w-xs sm:max-w-none"
+                    >
+                        Start XFlow Now
+                    </button>
+                </div>
+            </section>
+
+            {/* Footer (Minimal) */}
+            <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-gray-100 max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
+                <img
+                    src={logo}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-16 sm:h-20 md:h-24 select-none pointer-events-none absolute left-0 bottom-0 -z-10 opacity-10"
+                />
+                <div className="flex items-center gap-2">
+                    <img src={logo} alt="AskLake" className="h-5 sm:h-6" />
+                </div>
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-[#5F6368]">
+                    <button className="hover:text-[#202124]">Privacy</button>
+                    <button className="hover:text-[#202124]">Terms</button>
+                    <button className="hover:text-[#202124] whitespace-nowrap">Tel: 010-4819-4258</button>
+                </div>
+                <div className="text-xs sm:text-sm text-[#9AA0A6]">
+                    © 2026 XFlow
+                </div>
+            </footer>
+
+        </div>
+    );
+}
+
+export default LandingPage;

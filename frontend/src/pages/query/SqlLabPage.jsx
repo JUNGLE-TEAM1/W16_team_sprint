@@ -1,0 +1,576 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Play, Loader2, XCircle, Download, BarChart3, Sparkles } from "lucide-react";
+import { executeQuery as runDuckDBQuery } from "../../services/apiDuckDB";
+import { executeQuery as runTrinoQuery, executeQueryPaginated as runTrinoQueryPaginated } from "../../services/apiTrino";
+import { useToast } from "../../components/common/Toast";
+import InlineAIInput from "../../components/ai/InlineAIInput";
+import TableColumnSidebar from "./components/TableColumnSidebar";
+import QueryExplorer from "./components/QueryExplorer";
+import Combobox from "../../components/common/Combobox";
+
+const QUERY_STORAGE_KEY = 'sqllab_current_query';
+const RESULTS_STORAGE_KEY = 'sqllab_last_results';
+const ENGINE_STORAGE_KEY = 'sqllab_query_engine';
+
+const ENGINE_PLACEHOLDERS = {
+    duckdb: "Enter your SQL query here...\nExample: SELECT * FROM read_parquet('s3://bucket/path/*.parquet') LIMIT 10",
+    trino: "Enter your SQL query here...\nExample: SELECT * FROM lakehouse.default.my_table "
+};
+
+export default function SqlLabPage() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { showToast } = useToast();
+
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [query, setQuery] = useState("");
+    const [executing, setExecuting] = useState(false);
+    const [results, setResults] = useState(null);
+    const [error, setError] = useState(null);
+    const [viewMode, setViewMode] = useState('table'); // 'table' | 'chart'
+    const [engine, setEngine] = useState(() => {
+        return sessionStorage.getItem(ENGINE_STORAGE_KEY) || 'trino';
+    }); // 'duckdb' | 'trino'
+
+    // Chart configuration state
+    const [chartType, setChartType] = useState('bar');
+    const [xAxis, setXAxis] = useState('');
+    const [yAxes, setYAxes] = useState([]);
+    const [calculatedMetrics, setCalculatedMetrics] = useState([]);
+    const [breakdownBy, setBreakdownBy] = useState('');
+    const [isStacked, setIsStacked] = useState(false);
+    const [aggregation, setAggregation] = useState('SUM');
+    const [timeGrain, setTimeGrain] = useState('');
+    const [limit, setLimit] = useState(20);
+    const [sortBy, setSortBy] = useState('');
+    const [sortOrder, setSortOrder] = useState('desc');
+
+    // Query limit state
+    const [queryLimit, setQueryLimit] = useState(30);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [viewPage, setViewPage] = useState(1); // 현재 보고 있는 페이지
+
+    // AI state
+    const [showAI, setShowAI] = useState(false);
+
+    // Load query and results from multiple sources (priority order)
+    useEffect(() => {
+        // 1. From navigation state (Edit Query button)
+        if (location.state?.query) {
+            setQuery(location.state.query);
+            // Clear the state to prevent re-applying on refresh
+            window.history.replaceState({}, document.title);
+
+            // Also restore the last results since user is coming back from Explore
+            const savedResults = sessionStorage.getItem(RESULTS_STORAGE_KEY);
+            if (savedResults) {
+                try {
+                    setResults(JSON.parse(savedResults));
+                } catch (err) {
+                    console.error('Failed to parse saved results:', err);
+                }
+            }
+            return;
+        }
+
+        // 2. From sessionStorage (page refresh)
+        const savedQuery = sessionStorage.getItem(QUERY_STORAGE_KEY);
+        if (savedQuery) {
+            setQuery(savedQuery);
+        }
+
+        // Also try to restore results on page refresh
+        const savedResults = sessionStorage.getItem(RESULTS_STORAGE_KEY);
+        if (savedResults) {
+            try {
+                setResults(JSON.parse(savedResults));
+            } catch (err) {
+                console.error('Failed to parse saved results:', err);
+            }
+        }
+    }, [location]);
+
+    // Save query to sessionStorage whenever it changes
+    useEffect(() => {
+        if (query) {
+            sessionStorage.setItem(QUERY_STORAGE_KEY, query);
+        }
+    }, [query]);
+
+    // Save results to sessionStorage whenever they change
+    useEffect(() => {
+        if (results) {
+            sessionStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(results));
+        }
+    }, [results]);
+
+    // Save engine selection to sessionStorage
+    useEffect(() => {
+        sessionStorage.setItem(ENGINE_STORAGE_KEY, engine);
+    }, [engine]);
+
+    const executeQuery = async (page = 1) => {
+        if (!query.trim()) {
+            setError("Please enter a query");
+            return;
+        }
+
+        const isInitialQuery = page === 1;
+        if (isInitialQuery) {
+            setExecuting(true);
+            setError(null);
+            setCurrentPage(1);
+            setViewPage(1); // 첫 페이지로 리셋
+        }
+
+        try {
+            let finalQuery = query.trim();
+
+            if (engine === 'trino') {
+                // Trino: Use pagination API or direct limit
+                if (queryLimit === 'All') {
+                    // ALL: Use pagination (1000 rows at a time)
+                    const result = await runTrinoQueryPaginated(finalQuery, page, 1000);
+                    const columns = result.data.length > 0 ? Object.keys(result.data[0]) : [];
+
+                    if (page === 1) {
+                        // 첫 페이지 - 새로운 결과
+                        setResults({
+                            data: result.data,
+                            columns,
+                            row_count: result.row_count,
+                            was_limited: false,
+                            applied_limit: 'All',
+                            query: finalQuery,
+                        });
+                    } else {
+                        // 추가 페이지 - 누적
+                        setResults(prev => ({
+                            ...prev,
+                            data: [...prev.data, ...result.data],
+                            row_count: prev.row_count + result.row_count,
+                        }));
+                    }
+
+                    setHasMore(result.has_more);
+                    setCurrentPage(page);
+                } else {
+                    // Specific limit: Apply limit and don't paginate
+                    if (!/\bLIMIT\b/i.test(finalQuery)) {
+                        finalQuery = `${finalQuery.replace(/;$/, "")} LIMIT ${queryLimit}`;
+                    }
+
+                    const response = await runTrinoQuery(finalQuery);
+                    const columns = response.data.length > 0 ? Object.keys(response.data[0]) : [];
+                    const wasLimited = !/\bLIMIT\b/i.test(query.trim());
+                    setResults({
+                        data: response.data,
+                        columns,
+                        row_count: response.row_count,
+                        was_limited: wasLimited,
+                        applied_limit: wasLimited ? queryLimit : null,
+                        query: finalQuery,
+                    });
+                    setHasMore(false); // No pagination for specific limits
+                }
+            } else {
+                // DuckDB: Original way with limit
+                if (!/\bLIMIT\b/i.test(finalQuery)) {
+                    const limitValue = queryLimit === 'All' ? 1000000 : queryLimit;
+                    finalQuery = `${finalQuery.replace(/;$/, "")} LIMIT ${limitValue}`;
+                }
+
+                const response = await runDuckDBQuery(finalQuery);
+                const columns = response.data.length > 0 ? Object.keys(response.data[0]) : [];
+                const wasLimited = !/\bLIMIT\b/i.test(query.trim());
+                setResults({
+                    data: response.data,
+                    columns,
+                    row_count: response.row_count,
+                    was_limited: wasLimited,
+                    applied_limit: wasLimited ? queryLimit : null,
+                    query: finalQuery,
+                });
+                setHasMore(false);
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            if (isInitialQuery) {
+                setExecuting(false);
+            }
+        }
+    };
+
+    const loadMoreResults = async () => {
+        if (!hasMore || loadingMore) return;
+
+        setLoadingMore(true);
+        try {
+            await executeQuery(currentPage + 1);
+            // Load More 후 새로 로드된 페이지로 자동 이동
+            setViewPage(currentPage + 1);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    // 화면에 표시할 페이지 데이터 계산
+    const getPageData = () => {
+        if (!results || queryLimit !== 'All' || engine !== 'trino') {
+            return results?.data || [];
+        }
+
+        const rowsPerPage = 1000;
+        const startIndex = (viewPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        return results.data.slice(startIndex, endIndex);
+    };
+
+    const downloadCSV = () => {
+        if (!results) return;
+
+        try {
+            const header = results.columns.join(",");
+            const rows = results.data.map((row) =>
+                results.columns
+                    .map((col) => {
+                        const value = row[col];
+                        if (value === null || value === undefined) return "";
+                        if (typeof value === "object") return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
+                        const str = String(value);
+                        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+                            return `"${str.replace(/"/g, '""')}"`;
+                        }
+                        return str;
+                    })
+                    .join(",")
+            );
+            const csv = [header, ...rows].join("\n");
+
+            const bom = "\uFEFF";
+            const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `query_result_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast(`${results.row_count} rows downloaded`, 'success');
+        } catch (err) {
+            console.error('CSV download failed:', err);
+            showToast('CSV download failed', 'error');
+        }
+    };
+
+
+
+    return (
+        <div className="flex h-full overflow-hidden bg-gray-50 min-w-0 max-w-full">
+            {/* Schema Browser - Left */}
+            <TableColumnSidebar
+                selectedTable={selectedTable}
+                onSelectTable={setSelectedTable}
+                results={results}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                engine={engine}
+                chartType={chartType}
+                setChartType={setChartType}
+                xAxis={xAxis}
+                setXAxis={setXAxis}
+                yAxes={yAxes}
+                setYAxes={setYAxes}
+                calculatedMetrics={calculatedMetrics}
+                setCalculatedMetrics={setCalculatedMetrics}
+                breakdownBy={breakdownBy}
+                setBreakdownBy={setBreakdownBy}
+                isStacked={isStacked}
+                setIsStacked={setIsStacked}
+                aggregation={aggregation}
+                setAggregation={setAggregation}
+                timeGrain={timeGrain}
+                setTimeGrain={setTimeGrain}
+                limit={limit}
+                setLimit={setLimit}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                sortOrder={sortOrder}
+                setSortOrder={setSortOrder}
+            />
+
+            {/* Main SQL Lab Area */}
+            <div className="flex-1 flex flex-col bg-white min-w-0">
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 min-w-0">
+                    <div className="flex items-center justify-between min-w-0">
+                        <div>
+                            <h2 className="font-semibold text-gray-900">SQL Lab</h2>
+                            {selectedTable && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    xflow_db.{selectedTable.name}
+                                </p>
+                            )}
+                        </div>
+                        {/* AI Button */}
+                        <button
+                            onClick={() => setShowAI(!showAI)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
+                                bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600
+                                hover:from-indigo-100 hover:to-purple-100 transition-all
+                                border border-indigo-200/50"
+                            title="AI SQL Assistant"
+                        >
+                            <Sparkles size={14} />
+                            <span>AI</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Query Editor */}
+                <div className="p-4 border-b border-gray-200 min-w-0">
+                    {/* AI Input Panel */}
+                    {showAI && (
+                        <InlineAIInput
+                            promptType="query_page"
+                            metadata={{}}
+                            placeholder="Ask AI to generate SQL query..."
+                            engine={engine}  // Pass current engine (duckdb or trino)
+                            onApply={(sql) => {
+                                setQuery(sql);
+                                setShowAI(false);
+                            }}
+                            onCancel={() => setShowAI(false)}
+                        />
+                    )}
+
+                    <div className="relative min-w-0">
+                        <textarea
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={ENGINE_PLACEHOLDERS[engine]}
+                            className="w-full h-32 px-4 py-3 pb-12 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                        />
+
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                            {/* Left side - LIMIT selector */}
+                            <div className="flex items-center gap-2 bg-white/80 px-2 py-1 rounded">
+                                <label className="text-xs font-medium text-gray-600">LIMIT:</label>
+                                <Combobox
+                                    options={[30, 100, 200, 500, 'All']}
+                                    value={queryLimit}
+                                    onChange={(option) => setQueryLimit(option === 'All' ? 'All' : option)}
+                                    getKey={(item) => item}
+                                    getLabel={(item) => String(item)}
+                                    placeholder="Select limit"
+                                    classNames={{
+                                        container: 'w-20',
+                                        button: 'px-2 py-1 text-xs min-h-0 h-auto',
+                                        label: 'text-xs',
+                                        icon: 'w-3 h-3',
+                                        panel: 'min-w-[80px]',
+                                        option: 'px-3 py-1.5'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Right side - Execution Status and Run button */}
+                            <div className="flex items-center gap-3">
+                                {/* Execution Status */}
+                                {executing && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-white/80 px-2 py-1 rounded">
+                                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                        <span>Executing...</span>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={() => executeQuery()}
+                                    disabled={executing || !query.trim()}
+                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all shadow-sm ${executing || !query.trim()
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                                        : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md"
+                                        }`}
+                                >
+                                    {executing ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Play className="w-3.5 h-3.5" />
+                                    )}
+                                    Run
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="mx-4 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg min-w-0">
+                        <div className="flex items-start gap-2">
+                            <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-medium text-red-900">Error</p>
+                                <p className="text-sm text-red-700 mt-1">{error}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Results */}
+                <div className="flex-1 overflow-hidden min-w-0">
+                    {results ? (
+                        viewMode === 'chart' ? (
+                            <QueryExplorer
+                                results={results}
+                                query={query}
+                                chartType={chartType}
+                                setChartType={setChartType}
+                                xAxis={xAxis}
+                                setXAxis={setXAxis}
+                                yAxes={yAxes}
+                                setYAxes={setYAxes}
+                                calculatedMetrics={calculatedMetrics}
+                                setCalculatedMetrics={setCalculatedMetrics}
+                                breakdownBy={breakdownBy}
+                                setBreakdownBy={setBreakdownBy}
+                                isStacked={isStacked}
+                                setIsStacked={setIsStacked}
+                                aggregation={aggregation}
+                                setAggregation={setAggregation}
+                                timeGrain={timeGrain}
+                                setTimeGrain={setTimeGrain}
+                                limit={limit}
+                                setLimit={setLimit}
+                                sortBy={sortBy}
+                                setSortBy={setSortBy}
+                                sortOrder={sortOrder}
+                                setSortOrder={setSortOrder}
+                            />
+                        ) : (
+                            <div className="p-4 h-full flex flex-col overflow-hidden">
+                                {/* Results Header */}
+                                <div className="mb-4 flex items-center justify-between shrink-0">
+                                    <span className="text-sm font-medium text-gray-900">
+                                        Results: {results.row_count} rows total
+                                        {engine === 'trino' && queryLimit === 'All' && ` · Showing page ${viewPage} (${getPageData().length} rows)`}
+                                        {results.was_limited && queryLimit !== 'All' && ` · limited to ${results.applied_limit}`}
+                                    </span>
+                                    <button
+                                        onClick={downloadCSV}
+                                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Download CSV
+                                    </button>
+                                </div>
+
+                                {/* Results Table - Full Height with Horizontal Scroll */}
+                                <div className="flex-1 overflow-auto border border-gray-200 rounded-lg" style={{ width: 0, minWidth: '100%' }}>
+                                    <table className="w-full text-sm border-separate border-spacing-0">
+                                        <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                                            <tr>
+                                                {results.columns.map((column) => (
+                                                    <th
+                                                        key={column}
+                                                        className="px-4 py-3 text-left font-medium text-gray-700 bg-gray-50 whitespace-nowrap"
+                                                    >
+                                                        {column}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {getPageData().map((row, rowIndex) => (
+                                                <tr
+                                                    key={rowIndex}
+                                                    className="hover:bg-gray-50 transition-colors"
+                                                >
+                                                    {results.columns.map((column) => (
+                                                        <td
+                                                            key={column}
+                                                            className="px-4 py-3 text-gray-900 whitespace-nowrap"
+                                                        >
+                                                            {(() => {
+                                                                const value = row[column];
+                                                                if (value === null || value === undefined) return <span className="text-gray-400">-</span>;
+                                                                if (typeof value === "object") return JSON.stringify(value);
+                                                                return String(value);
+                                                            })()}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Page Navigation + Load More - Only for Trino with ALL limit */}
+                                {engine === 'trino' && queryLimit === 'All' && results && (
+                                    <div className="mt-4 flex justify-center items-center gap-2 shrink-0">
+                                        {/* 로드된 페이지 버튼들 */}
+                                        <div className="flex items-center gap-1">
+                                            {[...Array(currentPage)].map((_, i) => {
+                                                const pageNum = i + 1;
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => setViewPage(pageNum)}
+                                                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${viewPage === pageNum
+                                                            ? "bg-blue-600 text-white"
+                                                            : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Load More 버튼 */}
+                                        {hasMore && (
+                                            <button
+                                                onClick={loadMoreResults}
+                                                disabled={loadingMore}
+                                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${loadingMore
+                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                                    }`}
+                                            >
+                                                {loadingMore ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Loading...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Load More (1000 rows)
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                            <div className="text-center">
+                                <p className="text-sm">No query results yet</p>
+                                <p className="text-xs mt-1">Execute a query to see results</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div >
+    );
+}

@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+.text-responsive-safe {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.text-responsive-safe pre,
+.text-responsive-safe code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

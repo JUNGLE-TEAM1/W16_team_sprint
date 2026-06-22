@@ -1,0 +1,474 @@
+from fastapi import APIRouter, HTTPException, Body, status, Query, Depends
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+from beanie import PydanticObjectId
+
+from models import Domain, Dataset, ETLJob
+from schemas.domain import (
+    DomainCreate,
+    DomainUpdate,
+    DomainGraphUpdate,
+    DomainDatasetListResponse,
+    DatasetExecutionResponse,
+    ETLJobNodeResponse
+)
+from dependencies import get_user_session
+# Note: Domain indexing removed - no longer dual-writing to OpenSearch
+
+router = APIRouter()
+
+# --- Domain CRUD Endpoints ---
+
+@router.get("")
+async def get_all_domains(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=500, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search term for domain name"),
+    sort_by: str = Query("updated_at", description="Sort field: name, updated_at, owner, platform"),
+    sort_order: str = Query("desc", description="Sort order: asc, desc"),
+    owner: Optional[str] = Query(None, description="Filter by owner"),
+    platform: Optional[str] = Query(None, description="Filter by platform"),
+    user_session: Optional[Dict[str, Any]] = Depends(get_user_session)
+):
+    """
+    Get all domains (list view) with pagination, sorting, and filtering.
+    Filters domains based on user's dataset_access permissions.
+    Only shows domains where user has access to at least one dataset.
+    """
+    domains = await Domain.find_all().to_list()
+    
+    # Filter domains based on dataset permissions    
+    if user_session:
+        is_admin = user_session.get("is_admin", False)
+        all_datasets = user_session.get("all_datasets", False)
+        
+        # Admin or all_datasets users see everything
+        if not is_admin and not all_datasets:
+            dataset_access = user_session.get("dataset_access", [])
+            
+            # Get all datasets to map names to IDs
+            datasets = await Dataset.find_all().to_list()
+            dataset_id_to_name = {str(d.id): d.name for d in datasets}
+            allowed_dataset_names = set(dataset_id_to_name.get(did) for did in dataset_access if did in dataset_id_to_name)
+            
+            # Filter domains
+            filtered_domains = []
+            for domain in domains:
+                # Extract dataset names from domain nodes
+                has_accessible_dataset = False
+                
+                if domain.nodes:
+                    for node in domain.nodes:
+                        node_data = node.get("data", {})
+                        node_name = node_data.get("name") or node_data.get("label", "")
+                        
+                        # Extract dataset name (remove prefix like "(S3) ")
+                        if node_name and ') ' in node_name:
+                            node_name = node_name.split(') ')[1]
+                        
+                        # Check if this dataset is accessible
+                        if node_name in allowed_dataset_names:
+                            has_accessible_dataset = True
+                            break
+                
+                # Only include domain if user has access to at least one dataset
+                if has_accessible_dataset:
+                    filtered_domains.append(domain)
+            
+            domains = filtered_domains
+    
+    # Apply search filter
+    if search:
+        search_lower = search.lower()
+        domains = [d for d in domains if search_lower in d.name.lower()]
+    
+    # Apply owner filter
+    if owner:
+        domains = [d for d in domains if d.owner and d.owner.lower() == owner.lower()]
+    
+    # Apply platform filter
+    if platform:
+        domains = [d for d in domains if d.platform and d.platform.lower() == platform.lower()]
+    
+    # Sort
+    reverse = sort_order.lower() == "desc"
+    if sort_by == "name":
+        domains.sort(key=lambda d: (d.name or "").lower(), reverse=reverse)
+    elif sort_by == "owner":
+        domains.sort(key=lambda d: (d.owner or "").lower(), reverse=reverse)
+    elif sort_by == "platform":
+        domains.sort(key=lambda d: (d.platform or "").lower(), reverse=reverse)
+    else:  # default: updated_at
+        domains.sort(key=lambda d: d.updated_at or d.created_at, reverse=reverse)
+    
+    # Pagination
+    total = len(domains)
+    total_pages = (total + limit - 1) // limit  # ceil division
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_domains = domains[start_idx:end_idx]
+    
+    return {
+        "items": paginated_domains,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+
+
+# --- ETL Job Import Endpoints (must be before /{id} to avoid route conflict) ---
+
+@router.get("/jobs/{job_id}/execution", response_model=DatasetExecutionResponse)
+async def get_job_execution(job_id: str):
+    """Get the latest execution result (ETLJob lineage) for a specific Dataset"""
+    try:
+        # Find the most recent ETLJob for this dataset
+        etl_job = await ETLJob.find_one(
+            ETLJob.dataset_id == job_id,
+            sort=[("created_at", -1)]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch execution result: {str(e)}"
+        )
+
+    if not etl_job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No execution result found for this dataset"
+        )
+
+    return DatasetExecutionResponse(
+        id=str(etl_job.id),
+        name=etl_job.name,
+        description=etl_job.description,
+        dataset_id=etl_job.dataset_id,
+        sources=[ETLJobNodeResponse(**node.model_dump()) for node in etl_job.sources],
+        transforms=[ETLJobNodeResponse(**node.model_dump()) for node in etl_job.transforms],
+        targets=[ETLJobNodeResponse(**node.model_dump()) for node in etl_job.targets],
+        is_active=etl_job.is_active,
+        created_at=etl_job.created_at,
+        updated_at=etl_job.updated_at,
+    )
+
+
+
+
+@router.get("/jobs", response_model=List[DomainDatasetListResponse])
+async def list_domain_datasets(
+    import_ready: bool = Query(True),
+    user_session: Optional[Dict[str, Any]] = Depends(get_user_session)
+):
+    """Get Datasets (pipelines) that are ready to be imported into domain (import_ready=true by default)
+    Filters by user's dataset_access permissions if authenticated."""
+    try:
+        # Get all import-ready datasets (pipelines)
+        datasets = await Dataset.find(Dataset.import_ready == import_ready).to_list()
+
+        # Filter datasets based on dataset_access permissions
+        if user_session:
+            is_admin = user_session.get("is_admin", False)
+            all_datasets = user_session.get("all_datasets", False)
+            dataset_access = user_session.get("dataset_access", [])
+
+            # Admin or all_datasets users see all datasets
+            if not is_admin and not all_datasets and dataset_access is not None:
+                # Filter datasets: only include if user has access
+                filtered_datasets = []
+                for dataset in datasets:
+                    dataset_id_str = str(dataset.id)
+
+                    # Include dataset if user has access
+                    if dataset_id_str in dataset_access:
+                        filtered_datasets.append(dataset)
+
+                datasets = filtered_datasets
+
+        return [
+            DomainDatasetListResponse(
+                id=str(dataset.id),
+                name=dataset.name,
+                description=dataset.description,
+                source_count=len(dataset.sources) if dataset.sources else 0,
+                created_at=dataset.created_at,
+                updated_at=dataset.updated_at,
+            )
+            for dataset in datasets
+        ]
+    except Exception as e:
+        print(f"Error in list_domain_datasets: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch datasets: {str(e)}"
+        )
+
+@router.get("/{id}", response_model=Domain)
+async def get_domain(id: str):
+    """
+    Get a specific domain by ID (detail view).
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    return domain
+
+
+@router.post("", response_model=Domain, status_code=status.HTTP_201_CREATED)
+async def create_domain(domain_data: DomainCreate):
+    """
+    Create a new domain.
+    now expects the frontend to provide the initial graph layout (nodes/edges).
+    """
+    # 1. Base Domain Data
+    domain_dict = {
+        "name": domain_data.name,
+        "type": domain_data.type,
+        "owner": domain_data.owner,
+        "tags": domain_data.tags,
+        "description": domain_data.description,
+        "nodes": domain_data.nodes or [],
+        "edges": domain_data.edges or []
+    }
+
+    # 2. Logic to hydrate nodes/edges from job_ids (Legacy/Fallback)
+    # If frontend sends job_ids but NO nodes, we might ideally warn or just do nothing.
+    # For now, we assume frontend sends the calculated nodes.
+    # If both are empty, it's just an empty domain.
+
+    new_domain = Domain(**domain_dict)
+    await new_domain.insert()
+
+    return new_domain
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_domain(id: str):
+    """
+    Delete a domain.
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    await domain.delete()
+
+@router.put("/{id}", response_model=Domain)
+async def update_domain(id: str, update_data: DomainUpdate):
+    """
+    Update domain metadata (name, description, tags, etc.).
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    # Update fields that are provided
+    update_dict = update_data.model_dump(exclude_unset=True)
+    
+    if not update_dict:
+        return domain
+
+    for key, value in update_dict.items():
+        setattr(domain, key, value)
+
+    domain.updated_at = datetime.utcnow()
+    await domain.save()
+
+    return domain
+
+@router.post("/{id}/graph", response_model=Domain)
+async def save_domain_graph(id: str, graph_data: DomainGraphUpdate):
+    """
+    Upsert graph state (nodes, edges) for a domain.
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    domain.nodes = graph_data.nodes
+    domain.edges = graph_data.edges
+    domain.updated_at = datetime.utcnow()
+
+    await domain.save()
+
+    return domain
+
+
+# --- Attachment Endpoints ---
+
+from fastapi import UploadFile, File
+from models import Attachment
+import uuid
+from utils.aws_client import get_aws_client
+
+@router.post("/{id}/files", response_model=Domain)
+async def upload_attachment(id: str, file: UploadFile = File(...)):
+    """
+    Upload a file to S3 and attach it to the domain.
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    try:
+        # Check File Size (Limit 10MB)
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+        
+        if file_size > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File size exceeds 10MB limit")
+
+        s3 = get_aws_client("s3")
+        bucket_name = "xflow-data" # ToDo: Move to config
+        
+        # Ensure bucket exists
+        try:
+            s3.head_bucket(Bucket=bucket_name)
+        except Exception as e:
+            # Team Lead Directive: Do not auto-create bucket. Raise error if missing.
+            print(f"S3 Bucket '{bucket_name}' not found or inaccessible: {e}")
+            raise HTTPException(status_code=500, detail="Server Configuration Error: S3 Storage not ready.")
+
+        file_ext = file.filename.split('.')[-1] if '.' in file.filename else ""
+        file_uuid = str(uuid.uuid4())
+        s3_key = f"domains/{id}/docs/{file_uuid}_{file.filename}"
+        
+        # Upload to S3
+        s3.upload_fileobj(
+            file.file,
+            bucket_name,
+            s3_key,
+            ExtraArgs={'ContentType': file.content_type}
+        )
+        
+        # Construct S3 URL (virtual-hosted style)
+        # s3_url = f"https://{bucket_name}.s3.{s3.meta.region_name}.amazonaws.com/{s3_key}"
+        # Or simple s3:// style for internal use, but frontend might need http url.
+        # Let's verify if user wants presigned url or direct access.
+        # For now, let's store the s3:// path mostly or a constructed public URL if public.
+        # Assuming private bucket, let's store the key or s3 uri.
+        # But UI needs to download it. So generating a presigned URL on GET would be best,
+        # but for simplicity, let's store the s3 URI and maybe generate presigned link on frontend request?
+        # Actually, simpler: return the S3 key, and have a 'download' endpoint.
+        # But user asked for S3 attachment.
+        # Let's store the full S3 URI.
+        s3_uri = f"s3://{bucket_name}/{s3_key}"
+
+        # Create Attachment Metadata
+        attachment = Attachment(
+            id=file_uuid,
+            name=file.filename,
+            url=s3_uri,
+            size=file.size if file.size else 0, # UploadFile might not have size set immediately
+            type=file.content_type or "application/octet-stream",
+            uploaded_at=datetime.utcnow()
+        )
+        
+        # Add to Domain
+        if domain.attachments is None:
+            domain.attachments = []
+        domain.attachments.append(attachment)
+        domain.updated_at = datetime.utcnow()
+        
+        await domain.save()
+        return domain
+
+    except Exception as e:
+        print(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+@router.delete("/{id}/files/{file_id}", response_model=Domain)
+async def delete_attachment(id: str, file_id: str):
+    """
+    Delete an attachment from S3 and the domain.
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    # Find attachment
+    attachment = next((a for a in domain.attachments if a.id == file_id), None)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="File attachment not found")
+
+    try:
+        # Delete from S3
+        # Extract Key from s3://bucket/key
+        # url: s3://xflow-data/domains/...
+        if attachment.url.startswith("s3://"):
+            bucket_name = attachment.url.split("/")[2]
+            key = "/".join(attachment.url.split("/")[3:])
+            
+            s3 = get_aws_client("s3")
+            s3.delete_object(Bucket=bucket_name, Key=key)
+        
+        # Remove from List
+        domain.attachments = [a for a in domain.attachments if a.id != file_id]
+        domain.updated_at = datetime.utcnow()
+        
+        await domain.save()
+        return domain
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File deletion failed: {str(e)}")
+
+from fastapi import UploadFile, File, Request
+from models import Attachment
+import uuid
+from utils.aws_client import get_aws_client
+from utils.limiter import limiter
+
+# ... (Previous code)
+
+@router.get("/{id}/files/{file_id}/download")
+@limiter.limit("30/minute") # Team Lead Directive: 30 downloads per minute
+async def get_attachment_url(id: str, file_id: str, request: Request):
+    """
+    Download attachment directly (Proxied to bypass 403/CORS issues)
+    """
+    domain = await Domain.get(id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    attachment = next((a for a in domain.attachments if a.id == file_id), None)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="File attachment not found")
+        
+    try:
+        from fastapi.responses import StreamingResponse
+        import mimetypes
+
+        if attachment.url.startswith("s3://"):
+            bucket_name = attachment.url.split("/")[2]
+            key = "/".join(attachment.url.split("/")[3:])
+            
+            s3 = get_aws_client("s3")
+            response = s3.get_object(Bucket=bucket_name, Key=key)
+            
+            # Use generator to stream content
+            def iterfile():
+                yield from response['Body']
+
+            filename = attachment.name or "download"
+            # URL encode filename for Content-Disposition header
+            from urllib.parse import quote
+            encoded_filename = quote(filename)
+
+            return StreamingResponse(
+                iterfile(),
+                media_type=attachment.type or "application/octet-stream",
+                headers={
+                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+                }
+            )
+        else:
+            # If not S3, just redirect (fallback)
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=attachment.url)
+            
+    except Exception as e:
+        print(f"Download Proxy Failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")

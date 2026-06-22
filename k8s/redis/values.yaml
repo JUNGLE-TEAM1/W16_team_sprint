@@ -1,0 +1,50 @@
+## Redis Stack Configuration (includes RediSearch for vector similarity)
+## Install: helm install redis bitnami/redis -f k8s/redis/values.yaml -n xflow
+
+# Allow non-Bitnami image (Redis Stack)
+global:
+  security:
+    allowInsecureImages: true
+
+architecture: standalone
+
+# Use Redis Stack image (includes RediSearch, RedisJSON, RedisBloom)
+image:
+  repository: redis/redis-stack-server
+  tag: "7.2.0-v10"
+
+auth:
+  enabled: true
+  existingSecret: "redis-secret"
+  existingSecretPasswordKey: "redis-password"
+
+master:
+  persistence:
+    enabled: false
+
+  # Eviction policy for cache use case
+  configuration: |
+    maxmemory 384mb
+    maxmemory-policy allkeys-lru
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Node selector (uncomment if needed)
+  # nodeSelector:
+  #   node-type: general
+
+# Disable replica for standalone
+replica:
+  replicaCount: 0
+
+# Metrics (optional - uncomment to enable)
+# metrics:
+#   enabled: true
+#   serviceMonitor:
+#     enabled: true

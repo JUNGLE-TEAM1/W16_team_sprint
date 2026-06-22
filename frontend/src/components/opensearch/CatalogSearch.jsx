@@ -1,0 +1,277 @@
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, RefreshCw, Database, Workflow, Loader2, Edit, GitBranch, Info } from 'lucide-react';
+import { useSearch, useTriggerIndexing } from '../../hooks/useOpenSearch';
+
+/**
+ * 통합 검색 컴포넌트
+ * - Domain/ETL Job 검색 (디바운스 적용)
+ * - 인덱싱 새로고침 버튼
+ * - 검색 결과 드롭다운
+ */
+export default function CatalogSearch() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const searchRef = useRef(null);
+
+  // 검색 API 호출 (디바운스 적용)
+  const { results, loading, error } = useSearch(query);
+
+  // 인덱싱 트리거
+  const { trigger: triggerIndexing, loading: indexing } = useTriggerIndexing();
+
+  // 검색 결과가 있으면 드롭다운 열기
+  useEffect(() => {
+    if (results.length > 0 && query.trim().length > 0) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [results, query]);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Edit 버튼: Dataset 편집
+  const handleEdit = (result) => {
+    const datasetType = result.dataset_type || 'source';
+    if (datasetType === 'target') {
+      navigate(`/target`, { state: { jobId: result.doc_id, editMode: true } });
+    } else {
+      navigate(`/source`, { state: { jobId: result.doc_id, editMode: true } });
+    }
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  // Catalog 버튼: 리니지 그래프
+  const handleCatalog = (result) => {
+    navigate(`/catalog/${result.doc_id}`);
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  // Info 버튼: 상세 정보 (Runs, Quality)
+  const handleInfo = (result) => {
+    navigate(`/etl/job/${result.doc_id}/runs`);
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  // 인덱싱 버튼 클릭
+  const handleRefresh = async () => {
+    try {
+      await triggerIndexing();
+    } catch (err) {
+      console.error('Indexing failed:', err);
+    }
+  };
+
+  // 검색어 하이라이트 함수
+  const highlightText = (text, query) => {
+    if (!text || !query) return text;
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, index) =>
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark key={index} className="bg-yellow-200 text-gray-900">{part}</mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
+
+  // 결과를 doc_type별로 그룹화
+  const groupedResults = results.reduce((acc, result) => {
+    const type = result.doc_type;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(result);
+    return acc;
+  }, {});
+
+  // 타입별 라벨
+  const typeLabels = {
+    domain: { label: '도메인', icon: Database },
+    etl_job: { label: '데이터셋', icon: Workflow }
+  };
+
+  return (
+    <div className="flex min-w-0 max-w-full flex-1 items-center gap-2" ref={searchRef}>
+      {/* 검색 Input */}
+      <div className="relative min-w-0 flex-1">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          {loading ? (
+            <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4 text-gray-400" />
+          )}
+        </div>
+        <input
+          type="text"
+          placeholder="데이터셋 검색..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => {
+            if (results.length > 0) setIsOpen(true);
+          }}
+          className="block w-full min-w-0 rounded-lg border border-gray-200 bg-gray-50 py-2 pr-3 pl-10 leading-5 placeholder-gray-400 transition-colors focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+        />
+
+        {/* 검색 결과 드롭다운 */}
+        {isOpen && (
+          <div className="absolute z-50 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+            {error && (
+              <div className="p-4 text-sm text-red-600">
+                오류: {error}
+              </div>
+            )}
+
+            {!error && results.length === 0 && query.trim().length > 0 && !loading && (
+              <div className="p-4 text-sm text-gray-500 text-center">
+                "{query}"에 대한 검색 결과가 없습니다
+              </div>
+            )}
+
+            {!error && Object.keys(groupedResults).length > 0 && (
+              <div className="py-2">
+                {Object.entries(groupedResults).map(([docType, items]) => {
+                  const typeInfo = typeLabels[docType] || { label: docType, icon: Database };
+                  const IconComponent = typeInfo.icon;
+
+                  return (
+                    <div key={docType} className="mb-2 last:mb-0">
+                      {/* Type Header */}
+                      <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          <IconComponent className="w-3.5 h-3.5" />
+                          {typeInfo.label}
+                          <span className="text-gray-400">({items.length})</span>
+                        </div>
+                      </div>
+
+                      {/* Results */}
+                      <div>
+                        {items.slice(0, 5).map((result, idx) => (
+                          <div
+                            key={`${result.doc_type}-${result.doc_id}-${idx}`}
+                            className="px-4 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5">
+                                <IconComponent className="w-4 h-4 text-gray-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {/* Dataset Info */}
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-sm text-gray-900 truncate">
+                                    {highlightText(result.name, query)}
+                                  </span>
+                                  {result.status && (
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${result.status === 'active'
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                      }`}>
+                                      {result.status}
+                                    </span>
+                                  )}
+                                </div>
+                                {result.description && (
+                                  <p className="text-xs text-gray-500 truncate mb-2">
+                                    {highlightText(result.description, query)}
+                                  </p>
+                                )}
+                                {result.tags && result.tags.length > 0 && (
+                                  <div className="flex items-center gap-1 mb-2 flex-wrap">
+                                    {result.tags.slice(0, 3).map((tag, tagIdx) => (
+                                      <span
+                                        key={tagIdx}
+                                        className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {result.tags.length > 3 && (
+                                      <span className="text-xs text-gray-400">
+                                        +{result.tags.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(result);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                    편집
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCatalog(result);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  >
+                                    <GitBranch className="w-3.5 h-3.5" />
+                                    카탈로그
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleInfo(result);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  >
+                                    <Info className="w-3.5 h-3.5" />
+                                    정보
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 새로고침 버튼 */}
+      <button
+        onClick={handleRefresh}
+        disabled={indexing}
+        title="검색 인덱스 새로고침"
+        className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <RefreshCw
+          className={`w-5 h-5 ${indexing ? 'animate-spin' : ''}`}
+        />
+      </button>
+    </div>
+  );
+}
